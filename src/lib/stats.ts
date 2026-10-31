@@ -1,5 +1,5 @@
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, isConfigured } from './firebase'
 
 export interface DayStat {
   day: string
@@ -19,8 +19,13 @@ export interface DayStat {
  * Refunds are not netted out of these figures (they are tracked per order). Unverified/failed payments are never counted.
  */
 export async function loadStats(days: number): Promise<DayStat[]> {
-  const snap = await getDocs(query(collection(db, 'statsDaily'), orderBy('day', 'desc'), limit(days)))
-  return snap.docs.map((d) => d.data() as DayStat).sort((a, b) => a.day.localeCompare(b.day))
+  if (!isConfigured) return []
+  try {
+    const snap = await getDocs(query(collection(db, 'statsDaily'), orderBy('day', 'desc'), limit(days)))
+    return snap.docs.map((d) => d.data() as DayStat).sort((a, b) => a.day.localeCompare(b.day))
+  } catch {
+    return []
+  }
 }
 
 export function summarise(stats: DayStat[]) {

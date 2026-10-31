@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { collection, getCountFromServer, getDocs, limit, orderBy, query, where } from 'firebase/firestore'
 import { AlertTriangle, ArrowRight, Boxes, ClipboardList, IndianRupee, Plus, Shirt, ShoppingBag } from 'lucide-react'
-import { db } from '../lib/firebase'
+import { db, isConfigured } from '../lib/firebase'
 import { useAuth } from '../lib/auth'
 import { loadStats, summarise, type DayStat } from '../lib/stats'
 import { errMsg, formatINR, fmtDate } from '../lib/util'
@@ -34,6 +34,13 @@ export default function Dashboard() {
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!isConfigured) {
+      setStats([])
+      setOrders([])
+      setCounts({ products: 0, awaiting: 0 })
+      setLow([])
+      return
+    }
     const jobs: Promise<unknown>[] = []
     if (can('analytics:read')) jobs.push(loadStats(30).then(setStats))
     if (can('orders:read')) {

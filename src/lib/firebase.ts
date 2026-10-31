@@ -1,5 +1,4 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
@@ -15,7 +14,20 @@ const config = {
 
 export const isConfigured = Boolean(config.apiKey && config.projectId && config.appId)
 
-const app = isConfigured ? (getApps().length ? getApp() : initializeApp(config)) : undefined
-export const auth = app ? getAuth(app) : (undefined as never)
-export const db = app ? getFirestore(app) : (undefined as never)
-export const storage = app ? getStorage(app) : (undefined as never)
+// Initialize with safe fallback project so Firestore and Storage SDK objects never throw synchronous undefined reference crashes
+const app = getApps().length
+  ? getApp()
+  : initializeApp(
+      isConfigured
+        ? config
+        : {
+            apiKey: 'dummy-api-key',
+            projectId: 'demo-zebella-studio',
+            storageBucket: 'demo-zebella.appspot.com',
+            messagingSenderId: '123456789012',
+            appId: '1:123456789012:web:demo',
+          }
+    )
+
+export const db = getFirestore(app)
+export const storage = getStorage(app)

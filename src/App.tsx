@@ -1,10 +1,42 @@
-import { Suspense, lazy, useState } from "react"
+import { Component, Suspense, lazy, useState, type ErrorInfo, type ReactNode } from "react"
 import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { BarChart3, Boxes, ClipboardList, FileText, FolderTree, Gift, Image, LayoutGrid, LogOut, Mail, Menu, MessageSquareQuote, Package, ScrollText, Settings, Shirt, Users, X } from 'lucide-react'
 import { AuthProvider, useAuth } from './lib/auth'
 import type { Permission } from './lib/permissions'
 import { Spinner, ToastProvider } from './components/ui'
 import { LoginPage, NoAccessPage } from './pages/Login'
+
+interface EBProps { children: ReactNode }
+interface EBState { hasError: boolean; error: Error | null }
+
+class ErrorBoundary extends Component<EBProps, EBState> {
+  state: EBState = { hasError: false, error: null }
+  static getDerivedStateFromError(error: Error): EBState {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Caught by ErrorBoundary:', error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-espresso text-ivory">
+          <div className="max-w-md rounded-2xl bg-espresso/90 p-8 border border-white/10 shadow-2xl">
+            <h2 className="text-2xl font-bold text-danger">Something went wrong</h2>
+            <p className="mt-3 text-sm text-ivory/70">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+            <button
+              onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/' }}
+              className="btn btn-solid mt-6"
+            >
+              Refresh Overview
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 const L = <T extends Record<string, unknown>>(f: () => Promise<T>, k: keyof T) => lazy(() => f().then((m) => ({ default: m[k] as React.ComponentType })))
 const Dashboard = L(() => import("./pages/Dashboard"), "default")
 const ProductsPage = L(() => import("./pages/Products"), "ProductsPage")
@@ -143,47 +175,49 @@ function Need({ perm, children }: { perm: Permission; children: React.ReactNode 
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Gate />}>
-              <Route index element={<Dashboard />} />
-              <Route path="orders" element={<Need perm="orders:read"><OrdersPage /></Need>} />
-              <Route path="orders/:id" element={<Need perm="orders:read"><OrderDetailPage /></Need>} />
-              <Route path="products" element={<Need perm="catalog:write"><ProductsPage /></Need>} />
-              <Route path="products/new" element={<Need perm="catalog:write"><ProductEditorPage /></Need>} />
-              <Route path="products/:id" element={<Need perm="catalog:write"><ProductEditorPage /></Need>} />
-              <Route path="categories" element={<Need perm="catalog:write"><CategoriesPage /></Need>} />
-              <Route path="categories/new" element={<Need perm="catalog:write"><CategoryEditPage /></Need>} />
-              <Route path="categories/:id" element={<Need perm="catalog:write"><CategoryEditPage /></Need>} />
-              <Route path="collections" element={<Need perm="catalog:write"><CollectionsPage /></Need>} />
-              <Route path="collections/new" element={<Need perm="catalog:write"><CollectionEditPage /></Need>} />
-              <Route path="collections/:id" element={<Need perm="catalog:write"><CollectionEditPage /></Need>} />
-              <Route path="inventory" element={<Need perm="inventory:write"><InventoryPage /></Need>} />
-              <Route path="inventory/:pid/adjust" element={<Need perm="inventory:write"><InventoryAdjustPage /></Need>} />
-              <Route path="inventory/:pid/history" element={<Need perm="inventory:write"><InventoryHistoryPage /></Need>} />
-              <Route path="coupons" element={<Need perm="coupons:write"><CouponsPage /></Need>} />
-              <Route path="coupons/new" element={<Need perm="coupons:write"><CouponEditPage /></Need>} />
-              <Route path="coupons/:id" element={<Need perm="coupons:write"><CouponEditPage /></Need>} />
-              <Route path="customers" element={<Need perm="customers:read"><CustomersPage /></Need>} />
-              <Route path="customers/:uid" element={<Need perm="customers:read"><CustomerDetailPage /></Need>} />
-              <Route path="content" element={<Need perm="content:write"><ContentPage /></Need>} />
-              <Route path="banners" element={<Need perm="content:write"><BannersPage /></Need>} />
-              <Route path="banners/new" element={<Need perm="content:write"><BannerEditPage /></Need>} />
-              <Route path="banners/:id" element={<Need perm="content:write"><BannerEditPage /></Need>} />
-              <Route path="testimonials" element={<Need perm="content:write"><TestimonialsPage /></Need>} />
-              <Route path="testimonials/new" element={<Need perm="content:write"><TestimonialEditPage /></Need>} />
-              <Route path="testimonials/:id" element={<Need perm="content:write"><TestimonialEditPage /></Need>} />
-              <Route path="newsletter" element={<Need perm="roles:manage"><NewsletterPage /></Need>} />
-              <Route path="analytics" element={<Need perm="analytics:read"><Analytics /></Need>} />
-              <Route path="settings" element={<Need perm="content:write"><SettingsPage /></Need>} />
-              <Route path="audit-logs" element={<Need perm="audit:read"><AuditLogsPage /></Need>} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Gate />}>
+                <Route index element={<Dashboard />} />
+                <Route path="orders" element={<Need perm="orders:read"><OrdersPage /></Need>} />
+                <Route path="orders/:id" element={<Need perm="orders:read"><OrderDetailPage /></Need>} />
+                <Route path="products" element={<Need perm="catalog:write"><ProductsPage /></Need>} />
+                <Route path="products/new" element={<Need perm="catalog:write"><ProductEditorPage /></Need>} />
+                <Route path="products/:id" element={<Need perm="catalog:write"><ProductEditorPage /></Need>} />
+                <Route path="categories" element={<Need perm="catalog:write"><CategoriesPage /></Need>} />
+                <Route path="categories/new" element={<Need perm="catalog:write"><CategoryEditPage /></Need>} />
+                <Route path="categories/:id" element={<Need perm="catalog:write"><CategoryEditPage /></Need>} />
+                <Route path="collections" element={<Need perm="catalog:write"><CollectionsPage /></Need>} />
+                <Route path="collections/new" element={<Need perm="catalog:write"><CollectionEditPage /></Need>} />
+                <Route path="collections/:id" element={<Need perm="catalog:write"><CollectionEditPage /></Need>} />
+                <Route path="inventory" element={<Need perm="inventory:write"><InventoryPage /></Need>} />
+                <Route path="inventory/:pid/adjust" element={<Need perm="inventory:write"><InventoryAdjustPage /></Need>} />
+                <Route path="inventory/:pid/history" element={<Need perm="inventory:write"><InventoryHistoryPage /></Need>} />
+                <Route path="coupons" element={<Need perm="coupons:write"><CouponsPage /></Need>} />
+                <Route path="coupons/new" element={<Need perm="coupons:write"><CouponEditPage /></Need>} />
+                <Route path="coupons/:id" element={<Need perm="coupons:write"><CouponEditPage /></Need>} />
+                <Route path="customers" element={<Need perm="customers:read"><CustomersPage /></Need>} />
+                <Route path="customers/:uid" element={<Need perm="customers:read"><CustomerDetailPage /></Need>} />
+                <Route path="content" element={<Need perm="content:write"><ContentPage /></Need>} />
+                <Route path="banners" element={<Need perm="content:write"><BannersPage /></Need>} />
+                <Route path="banners/new" element={<Need perm="content:write"><BannerEditPage /></Need>} />
+                <Route path="banners/:id" element={<Need perm="content:write"><BannerEditPage /></Need>} />
+                <Route path="testimonials" element={<Need perm="content:write"><TestimonialsPage /></Need>} />
+                <Route path="testimonials/new" element={<Need perm="content:write"><TestimonialEditPage /></Need>} />
+                <Route path="testimonials/:id" element={<Need perm="content:write"><TestimonialEditPage /></Need>} />
+                <Route path="newsletter" element={<Need perm="roles:manage"><NewsletterPage /></Need>} />
+                <Route path="analytics" element={<Need perm="analytics:read"><Analytics /></Need>} />
+                <Route path="settings" element={<Need perm="content:write"><SettingsPage /></Need>} />
+                <Route path="audit-logs" element={<Need perm="audit:read"><AuditLogsPage /></Need>} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   )
 }

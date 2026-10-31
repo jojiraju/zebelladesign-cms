@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { collection, getDocs, query, type QueryConstraint } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, isConfigured } from './firebase'
 import { errMsg } from './util'
 
 export type Doc<T> = T & { id: string }
@@ -13,6 +13,10 @@ export function useDocs<T>(name: string, constraints: QueryConstraint[] = []) {
   // constraints are intentionally read once per (name, reload)
   useEffect(() => {
     let live = true
+    if (!isConfigured) {
+      setState({ data: [], loading: false, error: null })
+      return
+    }
     getDocs(query(collection(db, name), ...constraints))
       .then((s) => live && setState({ data: s.docs.map((d) => ({ ...(d.data() as T), id: d.id })), loading: false, error: null }))
       .catch((e) => live && setState({ data: [], loading: false, error: errMsg(e) }))
