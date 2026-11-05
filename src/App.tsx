@@ -90,12 +90,6 @@ const GROUPS: { title: string; paths: string[] }[] = [
   { title: 'Insights', paths: ['/analytics', '/audit-logs'] },
 ]
 
-const COLORS: Record<string, string> = {
-  '/': '#f472b6', '/orders': '#38bdf8', '/customers': '#a78bfa', '/coupons': '#fbbf24', '/products': '#f472b6', '/categories': '#34d399',
-  '/collections': '#fb923c', '/inventory': '#22d3ee', '/content': '#a78bfa', '/banners': '#f472b6', '/testimonials': '#fbbf24',
-  '/newsletter': '#38bdf8', '/settings': '#94a3b8', '/analytics': '#34d399', '/audit-logs': '#fb7185',
-}
-
 function Shell() {
   const loc = useLocation()
   const { user, role, can, logout } = useAuth()
@@ -109,12 +103,12 @@ function Shell() {
         if (!links.length) return null
         return (
           <div key={g.title}>
-            <p className="mb-1.5 px-3 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-ivory/35">{g.title}</p>
+            <p className="mb-1.5 px-3 text-[0.64rem] font-semibold uppercase tracking-[0.24em] text-[#c8a46a]/60">{g.title}</p>
             <div className="space-y-0.5">
               {links.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} end={to === '/'} onClick={() => setOpen(false)}
-                  style={{ ['--c' as string]: COLORS[to] }} className="nav-link flex items-center gap-3 rounded-xl px-2 py-1.5 text-[0.84rem] font-medium text-ivory/75 hover:bg-ivory/5 hover:text-white">
-                  <span className="nav-ico" style={{ color: COLORS[to] }}><Icon size={16} strokeWidth={1.9} /></span>{label}
+                  className="nav-link flex items-center gap-3 rounded-full px-2 py-1.5 text-[0.84rem] font-medium text-ivory/75 hover:bg-ivory/5 hover:text-white">
+                  <span className="nav-ico"><Icon size={16} strokeWidth={1.9} /></span>{label}
                 </NavLink>
               ))}
             </div>
@@ -126,16 +120,16 @@ function Shell() {
   const profile = (
     <div className="border-t border-ivory/10 p-3">
       <div className="flex items-center gap-3 rounded-lg p-2">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold text-white" style={{ background: "linear-gradient(135deg,#f472b6,#7c5cff)" }}>{initial}</div>
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold text-white" style={{ background: "linear-gradient(135deg,#c8a46a,#8f3a55)" }}>{initial}</div>
         <div className="min-w-0 flex-1"><p className="truncate text-[0.8rem] font-medium text-white">{user?.email}</p><p className="text-xs capitalize text-ivory/50">{role}</p></div>
         <button onClick={() => logout()} aria-label="Sign out" title="Sign out" className="grid h-8 w-8 place-items-center rounded-lg text-ivory/60 hover:bg-ivory/10 hover:text-white"><LogOut size={16} /></button>
       </div>
     </div>
   )
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
-      <aside className="side sticky top-0 hidden h-screen flex-col lg:flex">
-        <div className="flex justify-center px-6 pb-2 pt-6"><img src="/brand/logo-full-light.png" alt="Ze Bella" className="w-28" /></div>
+    <div className="min-h-screen lg:pl-[17.75rem]">
+      <aside className="side fixed bottom-3 left-3 top-3 z-20 hidden w-[16.5rem] flex-col rounded-3xl shadow-2xl shadow-black/20 lg:flex">
+        <div className="flex flex-col items-center px-6 pb-3 pt-7"><img src="/brand/logo-full-light.png" alt="Ze Bella" className="w-28" /><hr className="hairline mt-5 w-16" /></div>
         {nav}
         {profile}
       </aside>
@@ -154,7 +148,7 @@ function Shell() {
           </div>
         </div>
       )}
-      <main className="min-w-0 p-4 sm:p-8"><div className="mx-auto max-w-7xl"><Suspense fallback={<Spinner />}><div key={loc.pathname} className="page"><Outlet /></div></Suspense></div></main>
+      <main className="flex min-h-screen min-w-0 flex-col p-4 sm:p-6 lg:pl-3 2xl:p-8 2xl:pl-3"><div className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col"><Suspense fallback={<Spinner />}><div key={loc.pathname} className="page flex flex-1 flex-col"><Outlet /></div></Suspense></div></main>
     </div>
   )
 }

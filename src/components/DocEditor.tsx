@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Save } from 'lucide-react'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { db, isConfigured } from '../lib/firebase'
 import { audit } from '../lib/audit'
 import { revalidateStorefront } from '../lib/api'
 import { clean, errMsg } from '../lib/util'
@@ -21,6 +21,8 @@ export function DocEditor<T extends object>({ col, id, title, subtitle, permissi
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
+    // No Firebase project configured: show the form with defaults instead of waiting on a read that never completes.
+    if (!isConfigured) { setDraft({ ...defaults }); return }
     getDoc(doc(db, col, id)).then((s) => setDraft({ ...defaults, ...(s.exists() ? (s.data() as T) : {}) })).catch((e) => setErr(errMsg(e)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [col, id])
@@ -31,6 +33,7 @@ export function DocEditor<T extends object>({ col, id, title, subtitle, permissi
   const set = <K extends keyof T>(k: K, v: T[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d))
 
   async function save() {
+    if (!isConfigured) { toast('Firebase is not configured — add the VITE_FIREBASE_* values to .env to save.', 'error'); return }
     setBusy(true)
     try {
       await setDoc(doc(db, col, id), clean({ ...draft, updatedAt: Date.now() }), { merge: true })
@@ -43,6 +46,7 @@ export function DocEditor<T extends object>({ col, id, title, subtitle, permissi
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save() }}>
       <PageHeader sticky title={title} subtitle={subtitle} actions={writable ? <button className="btn btn-solid" disabled={busy}><Save size={15} />{busy ? 'Saving…' : 'Save changes'}</button> : undefined} />
+      {!isConfigured && <p className="mb-4 rounded-xl border border-champagne/50 bg-gold-soft px-3.5 py-2.5 text-sm text-gold-deep">Preview mode — Firebase isn&apos;t configured, so nothing is loaded or saved. Fill in the <code>VITE_FIREBASE_*</code> values in <code>.env</code> and restart the dev server.</p>}
       {!writable && <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">Read only for your role.</p>}
       <fieldset disabled={!writable} className="space-y-6">{children(draft, set)}</fieldset>
     </form>

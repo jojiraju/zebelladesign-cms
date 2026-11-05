@@ -6,7 +6,7 @@ import { Field, Section } from '../components/ui'
 import { BookOpen, Image, LayoutGrid, Quote, Shirt, Sparkles } from 'lucide-react'
 import { RichField } from '../components/RichText'
 
-interface Hero { imageUrl?: string; mobileImageUrl?: string; eyebrow?: string; heading: string; ctaLabel?: string; ctaHref?: string; secondaryLabel?: string; secondaryHref?: string }
+interface Hero { textInImage?: boolean; imageUrl?: string; mobileImageUrl?: string; eyebrow?: string; heading: string; ctaLabel?: string; ctaHref?: string; secondaryLabel?: string; secondaryHref?: string }
 interface Tile { title: string; subtitle?: string; imageUrl?: string; href: string; size?: 'large' | 'tall' | 'wide' | 'small' }
 interface Home {
   hero: Hero; featuredCollections: Tile[]; featuredProductIds: string[]
@@ -15,7 +15,7 @@ interface Home {
 }
 
 const defaults: Home = {
-  hero: { heading: 'Designed to be remembered', eyebrow: 'The Edit', ctaLabel: 'Shop the Collection', ctaHref: '/shop', secondaryLabel: 'New Arrivals', secondaryHref: '/shop?sort=newest' },
+  hero: { textInImage: true, heading: 'Designed to be remembered', ctaHref: '/shop' },
   featuredCollections: [], featuredProductIds: [],
   brandStory: { eyebrow: 'Our Story', heading: '', body: '', points: [] }, social: [], editorialMessage: '',
 }
@@ -29,12 +29,11 @@ export default function ContentPage() {
       subtitle="Everything on the storefront homepage and About page. Leave images empty to use the built-in placeholder artwork.">
       {(d, set) => (
         <>
-          <Section title="Hero" icon={Sparkles} tone="rose" className="grid gap-4 sm:grid-cols-2">
-            <SingleImage label="Desktop image (landscape, ≥1920px)" folder="content/hero" value={d.hero.imageUrl} onChange={(u) => set('hero', { ...d.hero, imageUrl: u })} />
-            <SingleImage label="Mobile image (portrait)" folder="content/hero" value={d.hero.mobileImageUrl} onChange={(u) => set('hero', { ...d.hero, mobileImageUrl: u })} />
-            {([['eyebrow', 'Small label'], ['heading', 'Headline'], ['ctaLabel', 'Primary button text'], ['ctaHref', 'Primary button link'], ['secondaryLabel', 'Secondary button text'], ['secondaryHref', 'Secondary button link']] as const).map(([k, l]) => (
-              <Field key={k} label={l}><input className="field" value={d.hero[k] ?? ''} onChange={(e) => set('hero', { ...d.hero, [k]: e.target.value })} /></Field>
-            ))}
+          <Section title="Hero banner" hint="Upload the finished banner artwork — the text and buttons are part of the image, so no separate text is needed." icon={Sparkles} tone="rose" className="grid gap-4 sm:grid-cols-2">
+            <SingleImage label="Desktop banner (landscape, ≥1920px)" folder="content/hero" value={d.hero.imageUrl} onChange={(u) => set('hero', { ...d.hero, imageUrl: u, textInImage: !!u })} />
+            <SingleImage label="Mobile banner (portrait)" folder="content/hero" value={d.hero.mobileImageUrl} onChange={(u) => set('hero', { ...d.hero, mobileImageUrl: u })} />
+            <Field label="Banner link" hint="Where visitors go when they click the banner."><input className="field" placeholder="/shop" value={d.hero.ctaHref ?? ''} onChange={(e) => set('hero', { ...d.hero, ctaHref: e.target.value })} /></Field>
+            <Field label="Image description" hint="Read aloud by screen readers and used for search engines — describe what the banner says."><input className="field" value={d.hero.heading ?? ''} onChange={(e) => set('hero', { ...d.hero, heading: e.target.value })} /></Field>
           </Section>
 
           <Section title="Featured collections" hint="Up to 5 editorial tiles. If empty, your visible Collections are used." icon={LayoutGrid} tone="violet">

@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowUpRight } from 'lucide-react'
+import { TrendingDown, TrendingUp } from 'lucide-react'
 
 export type Tone = 'rose' | 'violet' | 'sky' | 'emerald' | 'amber'
 export const TONE_COLORS: Record<Tone, [string, string]> = {
-  rose: ['#f472b6', '#e11d74'], violet: ['#a78bfa', '#6d4aff'], sky: ['#38bdf8', '#0284c7'], emerald: ['#34d399', '#059669'], amber: ['#fbbf24', '#ea8a00'],
+  rose: ['#d9a0a0', '#a8506a'], violet: ['#b0587a', '#5e2239'], sky: ['#b9a4b0', '#6e5566'], emerald: ['#a8b89a', '#5a7a5f'], amber: ['#e2c791', '#b88a3e'],
 }
 
 /** Eases a number up from 0 (skipped when the user prefers reduced motion). */
@@ -25,20 +25,40 @@ export function useCountUp(to: number, ms = 900) {
   return v
 }
 
-export function Stat({ label, value, format, hint, icon: Icon, tone = 'rose', index = 0 }: { label: string; value: number; format?(v: number): string; hint?: string; icon?: LucideIcon; tone?: Tone; index?: number }) {
+function Spark({ data, color }: { data: number[]; color: string }) {
+  const id = useId().replace(/:/g, '')
+  if (data.length < 2) return null
+  const W = 120, H = 36, max = Math.max(1, ...data), min = Math.min(...data), span = Math.max(1, max - min)
+  const pts: [number, number][] = data.map((v, i) => [(i * W) / (data.length - 1), H - 4 - ((v - min) / span) * (H - 8)])
+  const line = smooth(pts)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-9 w-full" aria-hidden="true" preserveAspectRatio="none">
+      <defs><linearGradient id={`k${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".3" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+      <path d={`${line} L${W},${H} L0,${H} Z`} fill={`url(#k${id})`} className="chart-fade" />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" vectorEffect="non-scaling-stroke" pathLength={1} className="chart-draw" />
+    </svg>
+  )
+}
+
+export function Stat({ label, value, format, hint, icon: Icon, tone = 'rose', index = 0, spark, delta }: { label: string; value: number; format?(v: number): string; hint?: string; icon?: LucideIcon; tone?: Tone; index?: number; spark?: number[]; delta?: number | null }) {
   const n = useCountUp(value)
   const [a, b] = TONE_COLORS[tone]
   return (
-    <div className="card card-hover anim-up relative overflow-hidden" style={{ ['--i' as string]: index }}>
-      <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${a}, ${b})` }} />
-      <span className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-[.12]" style={{ background: `radial-gradient(circle, ${b}, transparent 70%)` }} />
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-taupe-deep">{label}</p>
-          <p className="mt-2 font-serif text-[1.9rem] font-extrabold leading-none tracking-tight text-espresso">{(format ?? ((x) => String(Math.round(x))))(Math.round(n))}</p>
-          {hint && <p className="mt-2.5 flex items-center gap-1 text-xs text-taupe-deep"><ArrowUpRight size={13} style={{ color: b }} />{hint}</p>}
-        </div>
-        {Icon && <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white shadow-lg" style={{ background: `linear-gradient(135deg, ${a}, ${b})`, boxShadow: `0 8px 20px -8px ${b}` }}><Icon size={20} strokeWidth={1.9} /></div>}
+    <div className="card card-hover anim-up group relative overflow-hidden" style={{ ['--i' as string]: index }}>
+      <span className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full opacity-[.14] transition-opacity group-hover:opacity-30" style={{ background: `radial-gradient(circle, ${a}, transparent 70%)` }} />
+      <div className="relative flex items-center gap-2.5">
+        {Icon && <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white" style={{ background: `linear-gradient(135deg, ${a}, ${b})`, boxShadow: `0 8px 16px -8px ${b}` }}><Icon size={16} strokeWidth={1.8} /></div>}
+        <p className="eyebrow">{label}</p>
+        {delta != null && Number.isFinite(delta) && (
+          <span className={`ml-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${delta >= 0 ? 'bg-emerald-50 text-ok' : 'bg-[#fbeeec] text-danger'}`}>
+            {delta >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}{Math.abs(Math.round(delta))}%
+          </span>
+        )}
+      </div>
+      <p className="relative mt-4 font-serif text-[2.2rem] font-medium leading-none tracking-tight text-espresso">{(format ?? ((x) => String(Math.round(x))))(Math.round(n))}</p>
+      <div className="relative mt-3 flex items-end justify-between gap-3">
+        {hint && <p className="min-w-0 text-xs text-taupe-deep">{hint}</p>}
+        {spark && <div className="w-24 shrink-0"><Spark data={spark} color={b} /></div>}
       </div>
     </div>
   )
@@ -79,13 +99,13 @@ export function AreaChart({ data, format, label, tone = 'violet' }: { data: { la
     <figure className="relative">
       <svg ref={ref} viewBox={`0 0 ${W} ${H + 26}`} role="img" aria-label={label} className="w-full" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <defs>
-          <linearGradient id={`f${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={a} stopOpacity=".4" /><stop offset="1" stopColor={a} stopOpacity="0" /></linearGradient>
+          <linearGradient id={`f${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={a} stopOpacity=".28" /><stop offset="1" stopColor={a} stopOpacity="0" /></linearGradient>
           <linearGradient id={`s${id}`} x1="0" x2="1"><stop offset="0" stopColor={a} /><stop offset="1" stopColor={b} /></linearGradient>
         </defs>
-        {[0.25, 0.5, 0.75, 1].map((g) => <line key={g} x1={padX} x2={W - padX} y1={H - g * (H - top)} y2={H - g * (H - top)} stroke="#efe6e8" strokeDasharray="3 5" />)}
+        {[0.25, 0.5, 0.75, 1].map((g) => <line key={g} x1={padX} x2={W - padX} y1={H - g * (H - top)} y2={H - g * (H - top)} stroke="#ece3dd" strokeDasharray="2 6" />)}
         <path d={area} fill={`url(#f${id})`} className="chart-fade" />
-        <path d={line} fill="none" stroke={`url(#s${id})`} strokeWidth="3" strokeLinecap="round" pathLength={1} className="chart-draw" />
-        {data.map((d, i) => (data.length <= 12 || i % Math.ceil(data.length / 8) === 0) && <text key={d.label} x={x(i)} y={H + 20} textAnchor="middle" fontSize="10" fill="#8a7b81">{d.label.slice(-5)}</text>)}
+        <path d={line} fill="none" stroke={`url(#s${id})`} strokeWidth="2.25" strokeLinecap="round" pathLength={1} className="chart-draw" />
+        {data.map((d, i) => (data.length <= 12 || i % Math.ceil(data.length / 8) === 0) && <text key={d.label} x={x(i)} y={H + 20} textAnchor="middle" fontSize="10" fill="#9a8c88">{d.label.slice(-5)}</text>)}
         {hover !== null && h && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={top} y2={H} stroke={b} strokeOpacity=".35" strokeDasharray="4 4" />
@@ -94,11 +114,11 @@ export function AreaChart({ data, format, label, tone = 'violet' }: { data: { la
         )}
       </svg>
       {hover !== null && h && (
-        <div className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-lg bg-espresso px-3 py-1.5 text-xs text-white shadow-xl" style={{ left: `${(x(hover) / W) * 100}%` }}>
+        <div className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-champagne/40 bg-espresso px-3 py-1.5 text-xs text-white shadow-xl" style={{ left: `${(x(hover) / W) * 100}%` }}>
           <p className="text-white/60">{h.label}</p><p className="font-semibold">{format(h.value)}</p>
         </div>
       )}
-      <table className="sr-only"><caption>{label}</caption><tbody>{data.map((d) => <tr key={d.label}><th>{d.label}</th><td>{format(d.value)}</td></tr>)}</tbody></table>
+      <div className="sr-only"><table><caption>{label}</caption><tbody>{data.map((d) => <tr key={d.label}><th>{d.label}</th><td>{format(d.value)}</td></tr>)}</tbody></table></div>
     </figure>
   )
 }
@@ -115,18 +135,18 @@ export function BarChart({ data, format, label, tone = 'rose' }: { data: { label
     <figure>
       <svg viewBox={`0 0 ${W} ${H + 28}`} role="img" aria-label={label} className="w-full">
         <defs><linearGradient id={`b${id}`} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={a} /><stop offset="1" stopColor={b} /></linearGradient></defs>
-        {[0.25, 0.5, 0.75, 1].map((g) => <line key={g} x1={pad} x2={W - pad} y1={H - g * (H - 14)} y2={H - g * (H - 14)} stroke="#efe6e8" strokeDasharray="3 5" />)}
+        {[0.25, 0.5, 0.75, 1].map((g) => <line key={g} x1={pad} x2={W - pad} y1={H - g * (H - 14)} y2={H - g * (H - 14)} stroke="#ece3dd" strokeDasharray="2 6" />)}
         {data.map((d, i) => {
           const h = Math.max(d.value > 0 ? 3 : 0, (d.value / max) * (H - 14))
           return (
             <g key={d.label}>
-              <rect className="bar" style={{ animationDelay: `${i * 18}ms` }} x={pad + i * bw + bw * 0.18} y={H - h} width={bw * 0.64} height={h} rx={Math.min(5, bw * 0.25)} fill={`url(#b${id})`} opacity={d.value ? 1 : 0.25}><title>{`${d.label}: ${format(d.value)}`}</title></rect>
-              {(data.length <= 12 || i % Math.ceil(data.length / 10) === 0) && <text x={pad + i * bw + bw / 2} y={H + 18} textAnchor="middle" fontSize="10" fill="#8a7b81">{d.label.slice(-5)}</text>}
+              <rect className="bar" style={{ animationDelay: `${i * 18}ms` }} x={pad + i * bw + bw * 0.18} y={H - h} width={bw * 0.64} height={h} rx={Math.min(2, bw * 0.25)} fill={`url(#b${id})`} opacity={d.value ? 1 : 0.25}><title>{`${d.label}: ${format(d.value)}`}</title></rect>
+              {(data.length <= 12 || i % Math.ceil(data.length / 10) === 0) && <text x={pad + i * bw + bw / 2} y={H + 18} textAnchor="middle" fontSize="10" fill="#9a8c88">{d.label.slice(-5)}</text>}
             </g>
           )
         })}
       </svg>
-      <table className="sr-only"><caption>{label}</caption><tbody>{data.map((d) => <tr key={d.label}><th>{d.label}</th><td>{format(d.value)}</td></tr>)}</tbody></table>
+      <div className="sr-only"><table><caption>{label}</caption><tbody>{data.map((d) => <tr key={d.label}><th>{d.label}</th><td>{format(d.value)}</td></tr>)}</tbody></table></div>
     </figure>
   )
 }
@@ -139,14 +159,14 @@ export function Donut({ data, label }: { data: { label: string; value: number; c
   return (
     <div className="flex flex-wrap items-center gap-6">
       <svg viewBox="0 0 140 140" role="img" aria-label={label} className="h-40 w-40 shrink-0 -rotate-90">
-        <circle cx="70" cy="70" r={R} fill="none" stroke="#f3eced" strokeWidth="16" />
+        <circle cx="70" cy="70" r={R} fill="none" stroke="#f1e9e4" strokeWidth="16" />
         {data.filter((d) => d.value > 0).map((d, i) => {
           const len = (d.value / total) * C
           const el = <circle key={d.label} className="donut-seg" style={{ animationDelay: `${i * 120}ms`, ['--len' as string]: len }} cx="70" cy="70" r={R} fill="none" stroke={d.color} strokeWidth="16" strokeLinecap="butt" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-acc}><title>{`${d.label}: ${d.value}`}</title></circle>
           acc += len
           return el
         })}
-        <g className="rotate-90" style={{ transformOrigin: '70px 70px' }}><text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="800" fill="#1f1719">{total}</text><text x="70" y="84" textAnchor="middle" fontSize="9" fill="#8a7b81">orders</text></g>
+        <g className="rotate-90" style={{ transformOrigin: '70px 70px' }}><text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="800" fill="#1f1719">{total}</text><text x="70" y="84" textAnchor="middle" fontSize="9" fill="#9a8c88">orders</text></g>
       </svg>
       <ul className="min-w-40 flex-1 space-y-2 text-sm">
         {data.map((d) => (
@@ -154,5 +174,26 @@ export function Donut({ data, label }: { data: { label: string; value: number; c
         ))}
       </ul>
     </div>
+  )
+}
+
+/** Horizontal ranked bars (categories, products). */
+export function HBars({ data, format, label, tone = 'rose' }: { data: { label: string; value: number; sub?: string }[]; format(v: number): string; label: string; tone?: Tone }) {
+  const [a, b] = TONE_COLORS[tone]
+  const max = Math.max(1, ...data.map((d) => d.value))
+  return (
+    <ul className="space-y-3.5" aria-label={label}>
+      {data.map((d, i) => (
+        <li key={d.label}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[0.8rem]">
+            <span className="min-w-0 truncate font-medium capitalize text-ink">{d.label}</span>
+            <span className="shrink-0 tabular-nums text-taupe-deep">{d.sub && <span className="mr-2 text-xs">{d.sub}</span>}<b className="text-ink">{format(d.value)}</b></span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[#f1e9e4]">
+            <div className="hbar h-full rounded-full" style={{ width: `${Math.max(d.value ? 4 : 0, (d.value / max) * 100)}%`, background: `linear-gradient(90deg, ${a}, ${b})`, animationDelay: `${i * 80}ms` }} />
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }

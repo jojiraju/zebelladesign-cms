@@ -8,8 +8,9 @@ export function PageHeader({ title, subtitle, actions, sticky = false, back }: {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           {back && <div className="mb-1.5">{back}</div>}
-          <h1 className="flex items-center gap-3 text-2xl leading-tight sm:text-[1.7rem]"><span className="h-7 w-1.5 rounded-full" style={{ background: 'linear-gradient(180deg,#f472b6,#7c5cff)' }} />{title}</h1>
-          {subtitle && <p className="mt-1 max-w-2xl text-sm text-taupe-deep">{subtitle}</p>}
+          <h1 className="flex items-center gap-3 text-2xl font-medium leading-tight sm:text-[1.95rem]">{title}</h1>
+          <hr className="hairline mt-2.5 w-24" />
+          {subtitle && <p className="mt-2 max-w-2xl text-sm text-taupe-deep">{subtitle}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
@@ -21,7 +22,7 @@ export const Spinner = () => <div className="grid min-h-40 place-items-center"><
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-danger/25 bg-red-50 p-3 text-sm text-danger">
+    <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-danger/25 bg-[#fbeeec] p-3 text-sm text-danger">
       <AlertCircle size={16} className="mt-0.5 shrink-0" />{message}
     </p>
   )
@@ -40,7 +41,7 @@ export function Empty({ title, text, children }: { title: string; text?: string;
 
 const TONES: Record<string, string> = {
   ok: 'bg-emerald-50 text-ok ring-emerald-600/20', warn: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-  bad: 'bg-red-50 text-danger ring-red-600/20', neutral: 'bg-stone-100 text-taupe-deep ring-stone-400/20',
+  bad: 'bg-[#fbeeec] text-danger ring-red-600/20', neutral: 'bg-stone-100 text-taupe-deep ring-stone-400/20',
   brand: 'bg-gold-soft text-gold-deep ring-gold-deep/20',
 }
 export const Badge = ({ tone = 'neutral', children }: { tone?: keyof typeof TONES; children: ReactNode }) => (
@@ -58,7 +59,7 @@ export function Field({ label, hint, children, className = '' }: { label: string
 }
 
 const SEC_TONES: Record<string, string> = {
-  rose: 'from-pink-400 to-rose-600', violet: 'from-violet-400 to-indigo-600', sky: 'from-sky-400 to-blue-600', emerald: 'from-emerald-400 to-teal-600', amber: 'from-amber-300 to-orange-500',
+  rose: 'from-[#c98a92] to-[#8f3a55]', violet: 'from-[#a05a7c] to-[#5e2239]', sky: 'from-[#a89099] to-[#6e5566]', emerald: 'from-[#9fb394] to-[#5a7a5f]', amber: 'from-[#e2c791] to-[#b88a3e]',
 }
 /** Titled card section for editor pages, with a coloured icon tile. */
 export function Section({ title, hint, icon: Icon, tone = 'rose', children, className = '' }: { title?: string; hint?: string; icon?: LucideIcon; tone?: keyof typeof SEC_TONES; children: ReactNode; className?: string }) {
@@ -66,9 +67,9 @@ export function Section({ title, hint, icon: Icon, tone = 'rose', children, clas
     <section className={`card ${className}`}>
       {(title || hint) && (
         <header className="mb-5 flex items-center gap-3 border-b border-line/70 pb-4 sm:col-span-2">
-          {Icon && <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-md ${SEC_TONES[tone]}`}><Icon size={19} strokeWidth={1.9} /></div>}
+          {Icon && <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br text-white shadow-md ${SEC_TONES[tone]}`}><Icon size={19} strokeWidth={1.9} /></div>}
           <div className="min-w-0">
-            {title && <h2 className="font-serif text-base font-bold leading-tight text-espresso">{title}</h2>}
+            {title && <h2 className="font-serif text-lg font-semibold leading-tight text-espresso">{title}</h2>}
             {hint && <p className="mt-0.5 text-[0.8rem] text-taupe-deep">{hint}</p>}
           </div>
         </header>
@@ -98,7 +99,7 @@ export function Tabs<T extends string>({ value, onChange, items }: { value: T; o
         const on = t.value === value
         return (
           <button key={t.value} role="tab" aria-selected={on} type="button" onClick={() => onChange(t.value)}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${on ? 'bg-gradient-to-r from-pink-500 to-violet-600 text-white shadow-md' : 'text-taupe-deep hover:bg-gold-soft hover:text-gold-deep'}`}>
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${on ? 'bg-espresso text-[#f3e3c3] shadow-md' : 'text-taupe-deep hover:bg-gold-soft hover:text-gold-deep'}`}>
             {t.label}
             {t.count !== undefined && <span className={`rounded-full px-1.5 text-[0.7rem] font-semibold ${on ? 'bg-white/25 text-white' : 'bg-stone-100 text-taupe-deep'}`}>{t.count}</span>}
           </button>
@@ -110,7 +111,7 @@ export function Tabs<T extends string>({ value, onChange, items }: { value: T; o
 
 /** Small square icon button for table row actions. */
 export function IconButton({ label, onClick, to, tone = 'default', children }: { label: string; onClick?(): void; to?: string; tone?: 'default' | 'danger' | 'brand'; children: ReactNode }) {
-  const cls = `grid h-8 w-8 place-items-center rounded-lg border transition ${tone === 'danger' ? 'border-red-100 text-danger hover:bg-red-50' : tone === 'brand' ? 'border-gold/30 bg-gold-soft text-gold-deep hover:bg-gold/20' : 'border-line text-taupe-deep hover:bg-ivory hover:text-ink'}`
+  const cls = `grid h-8 w-8 place-items-center rounded-lg border transition ${tone === 'danger' ? 'border-red-100 text-danger hover:bg-[#fbeeec]' : tone === 'brand' ? 'border-gold/30 bg-gold-soft text-gold-deep hover:bg-gold/20' : 'border-line text-taupe-deep hover:bg-ivory hover:text-ink'}`
   return to
     ? <Link to={to} title={label} aria-label={label} className={cls} onClick={(e) => e.stopPropagation()}>{children}</Link>
     : <button type="button" title={label} aria-label={label} className={cls} onClick={(e) => { e.stopPropagation(); onClick?.() }}>{children}</button>
@@ -126,7 +127,7 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
     <div className="fixed inset-0 z-50 grid place-items-center bg-espresso/50 p-4 backdrop-blur-[2px]" onMouseDown={onClose}>
       <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}
         className={`relative max-h-[92vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ${wide ? 'max-w-3xl' : 'max-w-lg'}`}>
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pink-400 via-rose-500 to-violet-500" />
+        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#c8a46a] via-[#8f3a55] to-[#c8a46a]" />
         <div className="mb-5 flex items-center justify-between gap-4 border-b border-line/70 pb-4">
           <h2 className="text-xl">{title}</h2>
           <button onClick={onClose} aria-label="Close" className="btn btn-ghost btn-icon"><X size={18} /></button>
