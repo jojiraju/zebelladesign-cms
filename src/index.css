@@ -179,3 +179,30 @@ figure > svg { max-height: 15rem; }
 .step:hover { transform: translateY(-3px); border-color: var(--color-champagne); box-shadow: 0 16px 30px -18px rgba(60,25,35,.3); }
 
 section.flex-col > .dt-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+/* login illustration animations */
+@keyframes la-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes la-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-22px); } }
+@keyframes la-twinkle { 0%, 100% { transform: scale(.3) rotate(0); opacity: .25; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+@keyframes la-spin { to { transform: rotate(360deg); } }
+@keyframes la-flow { to { stroke-dashoffset: -56; } }
+@keyframes la-fall { 0% { transform: translateY(0) rotate(0) translateX(0); opacity: 0; } 8% { opacity: .85; } 50% { transform: translateY(420px) rotate(200deg) translateX(28px); } 100% { transform: translateY(860px) rotate(420deg) translateX(-18px); opacity: 0; } }
+@keyframes la-shimmer { 0% { transform: translateX(0) skewX(-18deg); } 55%, 100% { transform: translateX(760px) skewX(-18deg); } }
+@keyframes la-gown { 0%, 100% { transform: rotate(-.8deg); } 50% { transform: rotate(.8deg); } }
+@keyframes la-breathe { 0%, 100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes la-travel { to { offset-distance: 100%; } }
+@keyframes la-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.la-sway { transform-origin: 478px 0; animation: la-sway 5s ease-in-out infinite; }
+.la-float { animation: la-float 9s ease-in-out infinite; }
+.la-twinkle { transform-box: fill-box; transform-origin: center; animation: la-twinkle 3.2s ease-in-out infinite; }
+.la-spin { transform-origin: 300px 330px; animation: la-spin 90s linear infinite; }
+.la-spin-rev { transform-origin: 300px 330px; animation: la-spin 140s linear infinite reverse; }
+.la-flow { animation: la-flow 3s linear infinite; }
+.la-fall { animation: la-fall 12s linear infinite; opacity: 0; }
+.la-shimmer { animation: la-shimmer 6s ease-in-out infinite; }
+.la-gown { transform-origin: 300px 330px; animation: la-gown 6s ease-in-out infinite; }
+.la-breathe { transform-origin: 300px 380px; animation: la-breathe 7s ease-in-out infinite; }
+.la-needle { offset-path: path("M30,190 C130,130 90,300 170,250 S130,420 220,380 S250,500 300,470"); offset-rotate: auto; animation: la-travel 9s ease-in-out infinite alternate; }
+.la-draw { stroke-dasharray: 1; animation: la-draw 2.4s cubic-bezier(.4, 0, .2, 1) both; }
+.login-art h2 { color: #fff; font-weight: 400; }
+.login-art h2 em { color: #e8cf9e; }
