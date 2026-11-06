@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
+    if (__DEMO__) { persistAuth({ id: 'staff1', email: email || 'admin@zebelladesigns.example', name: 'Zebella Admin', role: 'admin' }, 'demo_token'); return }
     const baseUrl = (import.meta.env.VITE_STOREFRONT_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
     try {
       const res = await fetch(`${baseUrl}/api/auth/login`, {
@@ -120,8 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const devLogin = useCallback(() => {
     const devUser: AuthUser = {
-      id: 'dev_admin',
-      email: 'admin@zebelladesigns.com',
+      id: 'staff1',
+      email: 'admin@zebelladesigns.example',
       name: 'Studio Admin',
       role: 'admin',
     }

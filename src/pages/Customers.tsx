@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth'
 import { errMsg, fmtDate, formatINR } from '../lib/util'
 import { Badge, ErrorBox, IconButton, PageHeader, Section, useToast } from '../components/ui'
 import { DataTable, type TableColumn } from '../components/DataTable'
+import { Select } from '../components/Select'
 import type { Order } from './Orders'
 
 interface Customer { uid: string; email: string | null; name: string | null; verified: boolean; createdAt: string; lastSignIn: string; role: string | null }
@@ -27,9 +28,7 @@ function useRoleChange(onDone: (uid: string, role: string | null) => void) {
 }
 
 const RoleSelect = ({ c, onPick }: { c: Customer; onPick(role: string): void }) => (
-  <select aria-label={`Grant role to ${c.email}`} className="field !min-h-8 !w-auto !py-0 text-xs" value="" onClick={(e) => e.stopPropagation()} onChange={(e) => e.target.value && onPick(e.target.value)}>
-    <option value="">Grant role…</option><option value="admin">Admin</option><option value="editor">Editor</option><option value="fulfillment">Fulfilment</option>
-  </select>
+  <Select small width="9.5rem" label={`Grant role to ${c.email}`} value="" placeholder="Grant role…" onChange={onPick} options={[{ value: 'admin', label: 'Admin' }, { value: 'editor', label: 'Editor' }, { value: 'fulfillment', label: 'Fulfilment' }]} />
 )
 
 /* ============================== list ============================== */

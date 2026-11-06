@@ -76,7 +76,7 @@ function smooth(pts: [number, number][]) {
 }
 
 /** Animated gradient area/line chart with hover tooltip and a screen-reader table. */
-export function AreaChart({ data, format, label, tone = 'violet' }: { data: { label: string; value: number }[]; format(v: number): string; label: string; tone?: Tone }) {
+export function AreaChart({ data, format, label, tone = 'violet', tick }: { data: { label: string; value: number }[]; format(v: number): string; label: string; tone?: Tone; tick?(l: string): string }) {
   const id = useId().replace(/:/g, '')
   const ref = useRef<SVGSVGElement>(null)
   const [hover, setHover] = useState<number | null>(null)
@@ -105,7 +105,7 @@ export function AreaChart({ data, format, label, tone = 'violet' }: { data: { la
         {[0.25, 0.5, 0.75, 1].map((g) => <line key={g} x1={padX} x2={W - padX} y1={H - g * (H - top)} y2={H - g * (H - top)} stroke="#ece3dd" strokeDasharray="2 6" />)}
         <path d={area} fill={`url(#f${id})`} className="chart-fade" />
         <path d={line} fill="none" stroke={`url(#s${id})`} strokeWidth="2.25" strokeLinecap="round" pathLength={1} className="chart-draw" />
-        {data.map((d, i) => (data.length <= 12 || i % Math.ceil(data.length / 8) === 0) && <text key={d.label} x={x(i)} y={H + 20} textAnchor="middle" fontSize="10" fill="#9a8c88">{d.label.slice(-5)}</text>)}
+        {data.map((d, i) => (data.length <= 12 || i % Math.ceil(data.length / 8) === 0) && <text key={d.label} x={x(i)} y={H + 20} textAnchor="middle" fontSize="10" fill="#9a8c88">{tick ? tick(d.label) : d.label.slice(-5)}</text>)}
         {hover !== null && h && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={top} y2={H} stroke={b} strokeOpacity=".35" strokeDasharray="4 4" />
@@ -124,7 +124,7 @@ export function AreaChart({ data, format, label, tone = 'violet' }: { data: { la
 }
 
 /** Animated gradient bar chart. */
-export function BarChart({ data, format, label, tone = 'rose' }: { data: { label: string; value: number }[]; format(v: number): string; label: string; tone?: Tone }) {
+export function BarChart({ data, format, label, tone = 'rose', tick }: { data: { label: string; value: number }[]; format(v: number): string; label: string; tone?: Tone; tick?(l: string): string }) {
   const id = useId().replace(/:/g, '')
   const [a, b] = TONE_COLORS[tone]
   const max = Math.max(1, ...data.map((d) => d.value))
@@ -141,7 +141,7 @@ export function BarChart({ data, format, label, tone = 'rose' }: { data: { label
           return (
             <g key={d.label}>
               <rect className="bar" style={{ animationDelay: `${i * 18}ms` }} x={pad + i * bw + bw * 0.18} y={H - h} width={bw * 0.64} height={h} rx={Math.min(2, bw * 0.25)} fill={`url(#b${id})`} opacity={d.value ? 1 : 0.25}><title>{`${d.label}: ${format(d.value)}`}</title></rect>
-              {(data.length <= 12 || i % Math.ceil(data.length / 10) === 0) && <text x={pad + i * bw + bw / 2} y={H + 18} textAnchor="middle" fontSize="10" fill="#9a8c88">{d.label.slice(-5)}</text>}
+              {(data.length <= 12 || i % Math.ceil(data.length / 10) === 0) && <text x={pad + i * bw + bw / 2} y={H + 18} textAnchor="middle" fontSize="10" fill="#9a8c88">{tick ? tick(d.label) : d.label.slice(-5)}</text>}
             </g>
           )
         })}
@@ -152,7 +152,7 @@ export function BarChart({ data, format, label, tone = 'rose' }: { data: { label
 }
 
 /** Donut with a legend; each slice draws in. */
-export function Donut({ data, label }: { data: { label: string; value: number; color: string }[]; label: string }) {
+export function Donut({ data, label, unit = 'orders', format, center }: { data: { label: string; value: number; color: string }[]; label: string; unit?: string; format?(v: number): string; center?: string }) {
   const total = data.reduce((n, d) => n + d.value, 0)
   const R = 54, C = 2 * Math.PI * R
   let acc = 0
@@ -161,16 +161,16 @@ export function Donut({ data, label }: { data: { label: string; value: number; c
       <svg viewBox="0 0 140 140" role="img" aria-label={label} className="h-40 w-40 shrink-0 -rotate-90">
         <circle cx="70" cy="70" r={R} fill="none" stroke="#f1e9e4" strokeWidth="16" />
         {data.filter((d) => d.value > 0).map((d, i) => {
-          const len = (d.value / total) * C
+          const len = total ? (d.value / total) * C : 0
           const el = <circle key={d.label} className="donut-seg" style={{ animationDelay: `${i * 120}ms`, ['--len' as string]: len }} cx="70" cy="70" r={R} fill="none" stroke={d.color} strokeWidth="16" strokeLinecap="butt" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-acc}><title>{`${d.label}: ${d.value}`}</title></circle>
           acc += len
           return el
         })}
-        <g className="rotate-90" style={{ transformOrigin: '70px 70px' }}><text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="800" fill="#1f1719">{total}</text><text x="70" y="84" textAnchor="middle" fontSize="9" fill="#9a8c88">orders</text></g>
+        <g className="rotate-90" style={{ transformOrigin: '70px 70px' }}><text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="800" fill="#1f1719">{center ?? (format ? format(total) : total)}</text><text x="70" y="84" textAnchor="middle" fontSize="9" fill="#9a8c88">{unit}</text></g>
       </svg>
       <ul className="min-w-40 flex-1 space-y-2 text-sm">
-        {data.map((d) => (
-          <li key={d.label} className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />{d.label}</span><b>{d.value}</b></li>
+        {data.map((d, i) => (
+          <li key={`${d.label}-${i}`} className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: d.color }} />{d.label}</span><b>{format ? format(d.value) : d.value}</b></li>
         ))}
       </ul>
     </div>
@@ -184,7 +184,7 @@ export function HBars({ data, format, label, tone = 'rose' }: { data: { label: s
   return (
     <ul className="space-y-3.5" aria-label={label}>
       {data.map((d, i) => (
-        <li key={d.label}>
+        <li key={`${d.label}-${i}`}>
           <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[0.8rem]">
             <span className="min-w-0 truncate font-medium capitalize text-ink">{d.label}</span>
             <span className="shrink-0 tabular-nums text-taupe-deep">{d.sub && <span className="mr-2 text-xs">{d.sub}</span>}<b className="text-ink">{format(d.value)}</b></span>

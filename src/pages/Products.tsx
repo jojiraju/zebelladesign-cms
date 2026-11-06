@@ -11,6 +11,7 @@ import { Archive, ArrowLeft, Eye, EyeOff, FileText, FolderTree, Image as ImageIc
 import { Badge, Empty, ErrorBox, Field, IconButton, PageHeader, Section, Spinner, Switch, Tabs, useToast } from '../components/ui'
 import { DataTable, type TableColumn } from '../components/DataTable'
 import { RichField } from '../components/RichText'
+import { Select } from '../components/Select'
 import { GalleryEditor, uploadFile, type Img } from '../components/ImageUploader'
 
 interface Variant { id: string; sku: string; size?: string; color?: string; colorHex?: string; stock: number; reserved: number }
@@ -248,9 +249,7 @@ export function ProductEditorPage() {
           </Section>
           <Section title="Organisation" icon={FolderTree} tone="sky" className="space-y-4">
             <Field label="Category">
-              <select className="field" value={p.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
-                <option value="">Select…</option>{cats.data.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <Select label="Category" value={p.categoryId} onChange={(v) => set('categoryId', v)} placeholder="Select a category…" options={cats.data.map((c) => ({ value: c.id, label: c.name }))} />
               {!cats.loading && !cats.data.length && <span className="mt-1 block text-xs text-danger">Create a category first.</span>}
             </Field>
             <fieldset><legend className="label">Collections</legend>

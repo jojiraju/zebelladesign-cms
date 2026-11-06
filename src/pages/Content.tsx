@@ -5,6 +5,7 @@ import { SingleImage } from '../components/ImageUploader'
 import { Field, Section } from '../components/ui'
 import { BookOpen, Image, LayoutGrid, Quote, Shirt, Sparkles } from 'lucide-react'
 import { RichField } from '../components/RichText'
+import { Select } from '../components/Select'
 
 interface Hero { textInImage?: boolean; imageUrl?: string; mobileImageUrl?: string; eyebrow?: string; heading: string; ctaLabel?: string; ctaHref?: string; secondaryLabel?: string; secondaryHref?: string }
 interface Tile { title: string; subtitle?: string; imageUrl?: string; href: string; size?: 'large' | 'tall' | 'wide' | 'small' }
@@ -43,7 +44,7 @@ export default function ContentPage() {
                   <Field label="Title"><input className="field" value={t.title} onChange={(e) => patch({ title: e.target.value })} /></Field>
                   <Field label="Subtitle"><input className="field" value={t.subtitle ?? ''} onChange={(e) => patch({ subtitle: e.target.value })} /></Field>
                   <Field label="Link"><input className="field" value={t.href} onChange={(e) => patch({ href: e.target.value })} /></Field>
-                  <Field label="Size"><select className="field" value={t.size ?? 'small'} onChange={(e) => patch({ size: e.target.value as Tile['size'] })}><option value="large">Large</option><option value="tall">Tall</option><option value="wide">Wide</option><option value="small">Small</option></select></Field>
+                  <Field label="Size"><Select label="Tile size" value={t.size ?? 'small'} onChange={(v) => patch({ size: v as Tile['size'] })} options={[{ value: 'large', label: 'Large' }, { value: 'tall', label: 'Tall' }, { value: 'wide', label: 'Wide' }, { value: 'small', label: 'Small' }]} /></Field>
                   <SingleImage label="Image" folder="content/tiles" value={t.imageUrl} onChange={(u) => patch({ imageUrl: u })} />
                 </div>
               )} />

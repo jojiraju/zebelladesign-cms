@@ -4,6 +4,7 @@ const BASE = (import.meta.env.VITE_STOREFRONT_URL || import.meta.env.VITE_API_BA
 
 /** Calls a backend endpoint with the user's JWT token. */
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  if (__DEMO__) return (await import('./demo/api')).demoApi(path, init) as Promise<T>
   const token = getStoredToken()
   const res = await fetch(`${BASE}${path}`, {
     ...init,

@@ -148,7 +148,17 @@ function Shell() {
           </div>
         </div>
       )}
-      <main className="flex min-h-screen min-w-0 flex-col p-4 sm:p-6 lg:pl-3 2xl:p-8 2xl:pl-3"><div className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col"><Suspense fallback={<Spinner />}><div key={loc.pathname} className="page flex flex-1 flex-col"><Outlet /></div></Suspense></div></main>
+      <main className="flex min-h-screen min-w-0 flex-col p-4 sm:p-6 lg:pl-3 2xl:p-8 2xl:pl-3"><div className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col">{__DEMO__ && <DemoBar />}<Suspense fallback={<Spinner />}><div key={loc.pathname} className="page flex flex-1 flex-col"><Outlet /></div></Suspense></div></main>
+    </div>
+  )
+}
+
+/** Shown while the admin runs on built-in sample data instead of a Firebase project. */
+function DemoBar() {
+  return (
+    <div role="note" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-champagne/50 bg-gold-soft px-3.5 py-2 text-xs text-gold-deep">
+      <span className="rounded-full bg-gold-deep px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.16em] text-white">Demo</span>
+      <span>You&apos;re viewing sample data. You can edit anything to try it out — changes stay in this browser tab and reset when you refresh.</span>
     </div>
   )
 }

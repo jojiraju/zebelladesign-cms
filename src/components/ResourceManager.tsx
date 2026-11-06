@@ -1,3 +1,4 @@
+import { Select } from './Select'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { addDoc, collection, deleteDoc, doc, getDoc, orderBy, setDoc } from 'firebase/firestore'
@@ -187,7 +188,7 @@ export function ResourceEditor({ cfg }: { cfg: ResourceConfig }) {
             return (
               <Field key={f.key} label={f.label} hint={'hint' in f ? f.hint : undefined} className={wide ? "sm:col-span-2 xl:col-span-3" : ""}>
                 {f.type === 'textarea' ? <textarea rows={4} className="field" value={String(v ?? '')} onChange={(e) => set(f.key, e.target.value)} />
-                  : f.type === 'select' ? <select className="field" value={String(v ?? '')} onChange={(e) => set(f.key, e.target.value)}>{f.options.map(([val, l]) => <option key={val} value={val}>{l}</option>)}</select>
+                  : f.type === 'select' ? <Select label={f.label} value={String(v ?? '')} onChange={(x) => set(f.key, x)} options={f.options.map(([value, label]) => ({ value, label }))} />
                   : <input className="field" type={f.type === 'datetime' ? 'datetime-local' : f.type === 'number' || f.type === 'money' ? 'number' : 'text'} step={f.type === 'money' ? '0.01' : undefined} min={f.type === 'money' || f.type === 'number' ? 0 : undefined}
                       value={String(v ?? '')} onChange={(e) => {
                         set(f.key, e.target.value)

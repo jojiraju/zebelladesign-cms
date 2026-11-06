@@ -12,7 +12,9 @@ const config = {
   appId: env.VITE_FIREBASE_APP_ID,
 }
 
-export const isConfigured = Boolean(config.apiKey && config.projectId && config.appId)
+/** True while running on built-in sample data (see vite.config.ts). */
+export const isDemo = __DEMO__
+export const isConfigured = isDemo || Boolean(config.apiKey && config.projectId && config.appId)
 
 // Initialize with safe fallback project so Firestore and Storage SDK objects never throw synchronous undefined reference crashes
 const app = getApps().length

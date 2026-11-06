@@ -8,6 +8,7 @@ import { useDocs, type Doc } from '../lib/hooks'
 import { useAuth } from '../lib/auth'
 import { errMsg, fmtDate } from '../lib/util'
 import { Badge, ErrorBox, Field, IconButton, PageHeader, Section, Spinner, useToast } from '../components/ui'
+import { Select } from '../components/Select'
 import { DataTable, type TableColumn } from '../components/DataTable'
 
 interface Variant { id: string; sku: string; size?: string; color?: string; stock: number; reserved: number }
@@ -161,7 +162,7 @@ export function InventoryHistoryPage() {
         actions={p && <Link to={`/inventory/${p.id}/adjust`} className="btn btn-solid"><SlidersHorizontal size={15} />Adjust stock</Link>} />
       {qErr && <ErrorBox message={qErr} />}
       <DataTable<Movement> columns={histCols} data={rows} loading={!items} perPage={10} defaultSortFieldId="when" empty="No movements recorded."
-        filters={p && <select className="field !w-auto" aria-label="Filter by variant" value={variant} onChange={(e) => setVariant(e.target.value)}><option value="all">All variants</option>{p.variants.map((x) => <option key={x.id} value={x.id}>{vname(x)}</option>)}</select>} />
+        filters={p && <Select width="16rem" label="Filter by variant" value={variant} onChange={setVariant} options={[{ value: 'all', label: 'All Variants' }, ...p.variants.map((x) => ({ value: x.id, label: vname(x) }))]} />} />
     </div>
   )
 }

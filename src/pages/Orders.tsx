@@ -8,6 +8,7 @@ import { errMsg, fmtDate, formatINR } from '../lib/util'
 import { Check } from 'lucide-react'
 import { Badge, ErrorBox, Field, PageHeader, Spinner, Tabs, useToast } from '../components/ui'
 import { DataTable, type TableColumn } from '../components/DataTable'
+import { Select, cap } from '../components/Select'
 
 export interface OrderItem { productId: string; variantId: string; name: string; sku: string; image?: string; size?: string; color?: string; quantity: number; unitPrice: number; lineTotal: number }
 export interface Order {
@@ -86,9 +87,7 @@ export function OrdersPage() {
         onRowClicked={(o) => nav(`/orders/${o.id}`)}
         empty={rows?.length ? 'No orders match these filters.' : 'Orders appear here after customers check out.'}
         filters={<>
-          <select className="field !w-auto" aria-label="Payment status" value={pay} onChange={(e) => setPay(e.target.value)}>
-            <option value="all">All payments</option>{['created', 'pending', 'paid', 'failed', 'refund_pending', 'refunded'].map((s) => <option key={s} value={s}>{label(s)}</option>)}
-          </select>
+          <Select width="12rem" label="Payment status" value={pay} onChange={setPay} options={[{ value: 'all', label: 'All Payments' }, ...['created', 'pending', 'paid', 'failed', 'refund_pending', 'refunded'].map((v) => ({ value: v, label: cap(v) }))]} />
         </>} />
       {rows && rows.length >= max && <div className="mt-4 text-center"><button className="btn" onClick={() => setMax(max + 100)}>Load more orders</button></div>}
     </div>
