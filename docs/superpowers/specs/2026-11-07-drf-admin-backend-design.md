@@ -66,7 +66,7 @@ Browser (admin panel)
 - **New repo:** `zebelladesign-api`, created next to `zebelladesign-cms`.
 - **Stack:** Python 3.12 in Docker (3.11 also works locally), Django 5.2 LTS, DRF, `djangorestframework-simplejwt`, `django-cors-headers`, Pillow, `razorpay`, `django-storages[s3]`, `pytest-django`.
 - **Caddy instead of Nginx:** the brief named Nginx. Caddy does the same job and renews HTTPS certificates automatically with less configuration.
-- **Databases:** PostgreSQL in Docker Compose and production. SQLite is the zero-setup default for local development and unit tests. Stock and refund locking tests also run on PostgreSQL.
+- **Database:** PostgreSQL 17 everywhere: local development, tests and production. SQLite isn't supported, and the server refuses to start with any other database, because stock and refund safety depend on row locks.
 
 ### Django apps
 
@@ -314,7 +314,7 @@ Production settings: `DEBUG=False`, secrets from environment variables only, `AL
 - Business rules: all of section 7, including that stale forms can't overwrite stock, every order transition, and stock restoration on cancel.
 - Refunds with a mocked Razorpay client: full, partial, over-limit, double submit, and gateway error.
 - Uploads: valid files, a fake image with a valid extension, SVG, oversize, path traversal, and URL and path conversion.
-- Concurrency on PostgreSQL: two simultaneous stock adjustments and two simultaneous refunds.
+- Concurrency: two simultaneous stock adjustments and two simultaneous refunds. The whole suite runs on PostgreSQL.
 - `seed_demo` runs cleanly on an empty database.
 
 **Panel**
