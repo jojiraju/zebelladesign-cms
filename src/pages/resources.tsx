@@ -6,10 +6,10 @@ const visibility = (v: unknown) => (v ? <Badge tone="ok">Visible</Badge> : <Badg
 const status = (v: unknown) => (v === 'published' ? <Badge tone="ok">Published</Badge> : <Badge>Draft</Badge>)
 
 const category: ResourceConfig = {
-  collection: 'categories', path: '/categories', title: 'Categories', singular: 'Category', permission: 'catalog:write', orderBy: 'order',
+  endpoint: '/api/admin/categories', path: '/categories', title: 'Categories', singular: 'Category', permission: 'catalog:write',
   description: 'Shown in the storefront navigation and category pages.',
   defaults: { name: '', slug: '', description: '', imageUrl: '', order: 0, visible: true, seoTitle: '', seoDescription: '' },
-  slugFrom: 'name', idFrom: 'slug',
+  slugFrom: 'name',
   fields: [
     { key: 'name', label: 'Name', type: 'text', required: true },
     { key: 'slug', label: 'URL slug', type: 'text', required: true, hint: 'Lower-case, used in /categories/<slug>. Cannot change after creation.' },
@@ -24,14 +24,14 @@ const category: ResourceConfig = {
 }
 
 const collectionCfg: ResourceConfig = {
-  ...category, collection: 'collections', path: '/collections', title: 'Collections', singular: 'Collection',
+  ...category, endpoint: '/api/admin/collections', path: '/collections', title: 'Collections', singular: 'Collection',
   description: 'Curated groupings (e.g. Festive Wear). Assign products to collections in the product editor.',
   fields: [...category.fields.slice(0, 5), { key: 'featured', label: 'Featured', type: 'bool' }, ...category.fields.slice(5)],
   defaults: { ...category.defaults, featured: false },
 }
 
 const banners: ResourceConfig = {
-  collection: 'banners', path: '/banners', title: 'Banners', singular: 'Banner', permission: 'content:write', orderBy: 'order',
+  endpoint: '/api/admin/banners', path: '/banners', title: 'Banners', singular: 'Banner', permission: 'content:write',
   description: 'Promotional editorial banners on the homepage. Only published banners inside their date range are shown.',
   defaults: { heading: '', description: '', ctaLabel: '', href: '', desktopImage: '', mobileImage: '', status: 'draft', startsAt: '', endsAt: '', order: 0 },
   fields: [
@@ -50,7 +50,7 @@ const banners: ResourceConfig = {
 }
 
 const testimonials: ResourceConfig = {
-  collection: 'testimonials', path: '/testimonials', title: 'Testimonials', singular: 'Testimonial', permission: 'content:write',
+  endpoint: '/api/admin/testimonials', path: '/testimonials', title: 'Testimonials', singular: 'Testimonial', permission: 'content:write',
   description: 'Only add genuine reviews from real customers. Unverified testimonials are never shown on the storefront.',
   defaults: { name: '', location: '', quote: '', verified: false, status: 'draft' },
   fields: [
@@ -64,7 +64,7 @@ const testimonials: ResourceConfig = {
 }
 
 const coupons: ResourceConfig = {
-  collection: 'coupons', path: '/coupons', title: 'Coupons', singular: 'Coupon', permission: 'coupons:write', revalidate: false,
+  endpoint: '/api/admin/coupons', path: '/coupons', title: 'Coupons', singular: 'Coupon', permission: 'coupons:write',
   description: 'All validation and discount maths happens on the server at checkout.',
   defaults: { code: '', type: 'percent', value: '', minOrder: '', maxDiscount: '', startsAt: '', endsAt: '', usageLimit: '', perUserLimit: '', productIds: [], collectionIds: [], active: true },
   // The form edits fixed discounts in rupees; the server engine stores/reads paise.
@@ -74,7 +74,6 @@ const coupons: ResourceConfig = {
     if (b.type === 'fixed' && v <= 0) throw new Error('Enter a fixed discount above zero.')
     return { ...b, value: b.type === 'fixed' ? Math.round(v * 100) : v }
   },
-  onCreate: { usedCount: 0 }, // set once; never overwritten by later edits (the server increments it)
   afterLoad: (f, row) => (row.type === 'fixed' ? { ...f, value: Number(row.value) / 100 } : f),
   fields: [
     { key: 'code', label: 'Code', type: 'text', required: true, upper: true },

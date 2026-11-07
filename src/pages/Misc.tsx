@@ -1,12 +1,10 @@
 import { Download } from 'lucide-react'
-import { limit, orderBy } from 'firebase/firestore'
-import { useDocs, type Doc } from '../lib/hooks'
+import { useList, type Doc } from '../lib/hooks'
 import { fmtDate } from '../lib/util'
 import { Badge, ErrorBox, PageHeader } from '../components/ui'
 import { DataTable, type TableColumn } from '../components/DataTable'
 
 interface Sub { email: string; createdAt: number; source?: string }
-const subCons = [orderBy('createdAt', 'desc'), limit(1000)]
 
 const subCols: TableColumn<Doc<Sub>>[] = [
   { name: 'Email', sortable: true, selector: (s) => s.email, grow: 2, cell: (s) => <span className="font-medium">{s.email}</span> },
@@ -15,7 +13,7 @@ const subCols: TableColumn<Doc<Sub>>[] = [
 ]
 
 export function NewsletterPage() {
-  const { data, loading, error } = useDocs<Sub>('newsletterSubscribers', subCons)
+  const { data, loading, error } = useList<Sub>('/api/admin/newsletter', { limit: 1000 })
   const exportCsv = () => {
     const csv = ['email,subscribed_at,source', ...data.map((s) => `"${s.email.replace(/"/g, '""')}",${new Date(s.createdAt).toISOString()},${s.source ?? ''}`)].join('\n')
     const a = document.createElement('a')
@@ -34,7 +32,6 @@ export function NewsletterPage() {
 }
 
 interface Log { actor: string; actorEmail?: string | null; action: string; target: string; detail?: unknown; createdAt: number }
-const logCons = [orderBy('createdAt', 'desc'), limit(200)]
 
 const logCols: TableColumn<Doc<Log>>[] = [
   { id: 'when', name: 'When', sortable: true, selector: (l) => l.createdAt, minWidth: '170px', cell: (l) => <span className="whitespace-nowrap text-taupe-deep">{fmtDate(l.createdAt)}</span> },
@@ -45,7 +42,7 @@ const logCols: TableColumn<Doc<Log>>[] = [
 ]
 
 export function AuditLogsPage() {
-  const { data, loading, error } = useDocs<Log>('adminAuditLogs', logCons)
+  const { data, loading, error } = useList<Log>('/api/admin/audit-logs', { limit: 200 })
   return (
     <div>
       <PageHeader title="Audit log" subtitle="Append-only record of sensitive admin actions (latest 200)." />

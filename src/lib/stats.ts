@@ -1,5 +1,4 @@
-import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
-import { db, isConfigured } from './firebase'
+import { api } from './api'
 
 export interface DayStat {
   day: string
@@ -11,7 +10,7 @@ export interface DayStat {
 }
 
 /**
- * Loads the most recent `days` daily summaries written by the server when a payment is VERIFIED.
+ * Loads the most recent `days` daily summaries, which the server calculates from paid orders.
  * Definitions:
  *  - revenue   = sum of order totals (incl. shipping, GST-inclusive) for orders whose payment was verified server-side
  *  - orders    = number of such orders
@@ -19,10 +18,8 @@ export interface DayStat {
  * Refunds are not netted out of these figures (they are tracked per order). Unverified/failed payments are never counted.
  */
 export async function loadStats(days: number): Promise<DayStat[]> {
-  if (!isConfigured) return []
   try {
-    const snap = await getDocs(query(collection(db, 'statsDaily'), orderBy('day', 'desc'), limit(days)))
-    return snap.docs.map((d) => d.data() as DayStat).sort((a, b) => a.day.localeCompare(b.day))
+    return await api<DayStat[]>(`/api/admin/stats/daily?days=${days}`)
   } catch {
     return []
   }

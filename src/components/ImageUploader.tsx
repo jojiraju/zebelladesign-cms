@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
-import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
 import { ArrowLeft, ArrowRight, ImagePlus, Loader2, Trash2 } from 'lucide-react'
-import { storage } from '../lib/firebase'
+import { api } from '../lib/api'
 import { errMsg } from '../lib/util'
 import { useToast } from './ui'
 
@@ -11,49 +10,20 @@ const OK_IMG = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
 const MAX_IMG = 8 * 1024 * 1024
 const MAX_VIDEO = 50 * 1024 * 1024
 
-const CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined
-const PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined
-
-/** Free-tier alternative to Firebase Storage (which needs the Blaze plan): unsigned Cloudinary upload. */
-async function uploadToCloudinary(file: File, folder: string, video: boolean): Promise<Img> {
-  const body = new FormData()
-  body.append('file', file)
-  body.append('upload_preset', PRESET!)
-  body.append('folder', `zebella/${folder}`)
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/${video ? 'video' : 'image'}/upload`, { method: 'POST', body, signal: AbortSignal.timeout(120_000) })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok || !data.secure_url) throw new Error(data?.error?.message ?? 'Upload failed. Check the Cloudinary cloud name and upload preset.')
-  return { url: data.secure_url as string, path: data.public_id as string }
-}
-
-/** Validates type/size client-side (Storage rules enforce the same limits server-side) and uploads. */
+/** Quick client-side check of type and size (the server enforces the same limits), then upload. */
 export async function uploadFile(file: File, folder: string, opts: { video?: boolean } = {}): Promise<Img> {
   const isVideo = ['video/mp4', 'video/webm'].includes(file.type)
   if (opts.video ? !isVideo : !OK_IMG.includes(file.type)) throw new Error(opts.video ? 'Use an MP4 or WebM video.' : 'Use a JPG, PNG, WebP or AVIF image.')
   if (file.size > (opts.video ? MAX_VIDEO : MAX_IMG)) throw new Error(`File is too large (max ${opts.video ? 50 : 8} MB).`)
-  if (CLOUD && PRESET) return uploadToCloudinary(file, folder, !!opts.video)
-  const safe = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-')
-  const path = `${folder}/${Date.now()}-${safe}`
-  const task = uploadBytesResumable(ref(storage, path), file, { contentType: file.type })
-  // If Storage is not enabled / the bucket is unreachable the SDK retries silently for minutes.
-  // Fail fast with an actionable message when no bytes move for 20 seconds.
-  await new Promise<void>((resolve, reject) => {
-    let lastBytes = -1
-    let timer = setTimeout(stalled, 20_000)
-    function stalled() {
-      task.cancel()
-      reject(new Error('Upload is not progressing. Check that Firebase Storage is enabled (needs the Blaze plan), the bucket name in .env.local is correct, and the Storage rules are published.'))
-    }
-    task.on('state_changed', (s) => {
-      if (s.bytesTransferred !== lastBytes) { lastBytes = s.bytesTransferred; clearTimeout(timer); timer = setTimeout(stalled, 20_000) }
-    }, (e) => { clearTimeout(timer); reject(e) }, () => { clearTimeout(timer); resolve() })
-  })
-  return { url: await getDownloadURL(ref(storage, path)), path }
+  const body = new FormData()
+  body.append('file', file)
+  body.append('folder', folder)
+  body.append('kind', opts.video ? 'video' : 'image')
+  return api<Img>('/api/admin/uploads', { method: 'POST', body })
 }
 
 export async function removeFile(path?: string) {
-  // Cloudinary assets can't be deleted from the browser with an unsigned preset; remove them in its Media Library.
-  if (path && !(CLOUD && PRESET)) await deleteObject(ref(storage, path)).catch(() => undefined) // already gone is fine
+  if (path) await api(`/api/admin/uploads?path=${encodeURIComponent(path)}`, { method: 'DELETE' }).catch(() => undefined) // already gone is fine
 }
 
 /** Click-or-drop target shared by both editors. */

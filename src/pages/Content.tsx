@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDocs } from '../lib/hooks'
+import { useList } from '../lib/hooks'
 import { DocEditor, RepeatList } from '../components/DocEditor'
 import { SingleImage } from '../components/ImageUploader'
 import { Field, Section } from '../components/ui'
@@ -22,11 +22,11 @@ const defaults: Home = {
 }
 
 export default function ContentPage() {
-  const products = useDocs<{ name: string; status: string }>('products')
+  const products = useList<{ name: string; status: string }>('/api/admin/products', { limit: 2000 })
   const [filter, setFilter] = useState('')
 
   return (
-    <DocEditor<Home> col="homepageContent" id="main" title="Homepage content" permission="content:write" defaults={defaults}
+    <DocEditor<Home> endpoint="/api/admin/content/homepage" title="Homepage content" permission="content:write" defaults={defaults}
       subtitle="Everything on the storefront homepage and About page. Leave images empty to use the built-in placeholder artwork.">
       {(d, set) => (
         <>

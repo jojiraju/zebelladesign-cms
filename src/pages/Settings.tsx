@@ -26,7 +26,7 @@ const defaults: Settings = {
 
 export default function SettingsPage() {
   return (
-    <DocEditor<Settings> col="settings" id="store" title="Store settings" permission="content:write" defaults={defaults}
+    <DocEditor<Settings> endpoint="/api/admin/content/settings" title="Store settings" permission="content:write" defaults={defaults}
       subtitle="Announcements, shipping, tax, contact details, footer, policies and FAQs. Policies are your own legal text — nothing is pre-written.">
       {(d, set) => (
         <>

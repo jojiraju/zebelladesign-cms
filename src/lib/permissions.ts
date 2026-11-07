@@ -3,7 +3,7 @@ export type Permission =
   | 'content:write' | 'catalog:write' | 'orders:read' | 'orders:fulfil' | 'orders:refund'
   | 'inventory:write' | 'coupons:write' | 'customers:read' | 'analytics:read' | 'audit:read' | 'roles:manage'
 
-// UI hint only. Real enforcement is Firestore/Storage rules and the storefront /api/admin/* endpoints.
+// UI hint only. The API enforces the same table in accounts/permissions.py.
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: ['content:write', 'catalog:write', 'orders:read', 'orders:fulfil', 'orders:refund', 'inventory:write', 'coupons:write', 'customers:read', 'analytics:read', 'audit:read', 'roles:manage'],
   editor: ['content:write', 'catalog:write', 'coupons:write', 'analytics:read', 'orders:read'],

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { collection, doc, getDoc, getDocs, limit, orderBy, query } from 'firebase/firestore'
-import { db } from '../lib/firebase'
-import { api } from '../lib/api'
+import { api, apiList } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { errMsg, fmtDate, formatINR } from '../lib/util'
 import { Check } from 'lucide-react'
@@ -59,9 +57,8 @@ export function OrdersPage() {
 
   useEffect(() => {
     let live = true
-    const cs = [orderBy('createdAt', 'desc'), limit(max)]
-    getDocs(query(collection(db, 'orders'), ...cs))
-      .then((s) => live && setRows(s.docs.map((d) => ({ ...(d.data() as Order), id: d.id }))))
+    apiList<Order>('/api/admin/orders', { limit: max })
+      .then((r) => live && setRows(r.results))
       .catch((e) => live && setErr(errMsg(e)))
     return () => { live = false }
   }, [max])
@@ -106,7 +103,7 @@ export function OrderDetailPage() {
   const [refundAmt, setRefundAmt] = useState('')
   const [reason, setReason] = useState('')
 
-  const load = () => getDoc(doc(db, 'orders', id!)).then((s) => (s.exists() ? setO({ ...(s.data() as Order), id: s.id }) : setErr('Order not found.'))).catch((e) => setErr(errMsg(e)))
+  const load = () => api<Order>(`/api/admin/orders/${id}`).then(setO).catch((e) => setErr(errMsg(e)))
   useEffect(() => { void load() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function act<T>(fn: () => Promise<T>, ok: string) {
@@ -202,7 +199,7 @@ export function OrderDetailPage() {
               </div>
             )}
             {fulfil && paid && o.fulfillmentStatus !== 'cancelled' && (
-              <form className="mt-4 space-y-2 border-t border-line pt-4" onSubmit={(e) => { e.preventDefault(); void act(() => api(`/api/admin/orders/${o.id}`, { method: 'PATCH', body: JSON.stringify({ action: 'tracking', ...track }) }), 'Tracking saved (customer emailed if email is configured)') }}>
+              <form className="mt-4 space-y-2 border-t border-line pt-4" onSubmit={(e) => { e.preventDefault(); void act(() => api(`/api/admin/orders/${o.id}`, { method: 'PATCH', body: JSON.stringify({ action: 'tracking', ...track }) }), 'Tracking saved') }}>
                 <Field label="Carrier"><input className="field" required value={track.carrier} onChange={(e) => setTrack({ ...track, carrier: e.target.value })} /></Field>
                 <Field label="Tracking number"><input className="field" required value={track.trackingNumber} onChange={(e) => setTrack({ ...track, trackingNumber: e.target.value })} /></Field>
                 <Field label="Tracking URL (optional)"><input type="url" className="field" value={track.url} onChange={(e) => setTrack({ ...track, url: e.target.value })} /></Field>

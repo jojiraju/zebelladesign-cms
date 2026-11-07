@@ -1,7 +1,5 @@
-import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
-import { db, isDemo } from './firebase'
-import { api } from './api'
+import { api, apiList } from './api'
 import { errMsg } from './util'
 
 /* ======================================================= types ======================================================= */
@@ -70,24 +68,21 @@ export const tickFor = (g: Gran) => (l: string) => {
 /* ===================================================== loading ====================================================== */
 export interface ReportData {
   range: Range; history: ROrder[]; products: RProduct[]; users: RUser[]; events: REvent[]
-  usersOk: boolean; eventsOk: boolean; truncated: boolean; sample: boolean
+  usersOk: boolean; eventsOk: boolean; truncated: boolean
 }
 const LOOKBACK = 365 * DAY
 const ORDER_CAP = 10000
 
 async function loadLive(range: Range): Promise<ReportData> {
-  const snap = await getDocs(query(collection(db, 'orders'), where('createdAt', '>=', range.from - LOOKBACK), where('createdAt', '<=', range.to), orderBy('createdAt', 'desc'), limit(ORDER_CAP)))
-  const history = snap.docs.map((d) => ({ ...(d.data() as ROrder), id: d.id }))
-  const prods = await getDocs(query(collection(db, 'products'), limit(2000)))
-  const products = prods.docs.map((d) => ({ ...(d.data() as RProduct), id: d.id }))
+  const history = (await apiList<ROrder>('/api/admin/orders', { from: range.from - LOOKBACK, to: range.to, limit: ORDER_CAP })).results
+  const products = (await apiList<RProduct>('/api/admin/products', { limit: 2000 })).results
   let users: RUser[] = [], usersOk = true
   try { users = (await api<{ users: RUser[] }>('/api/admin/users?q=')).users } catch { usersOk = false }
   let events: REvent[] = [], eventsOk = true
   try {
-    const e = await getDocs(query(collection(db, 'productEvents'), where('createdAt', '>=', range.from), where('createdAt', '<=', range.to), orderBy('createdAt', 'desc'), limit(50000)))
-    events = e.docs.map((d) => d.data() as REvent)
+    events = (await apiList<REvent>('/api/admin/events', { from: range.from, to: range.to, limit: 50000 })).results
   } catch { eventsOk = false }
-  return { range, history, products, users, events, usersOk, eventsOk, truncated: history.length >= ORDER_CAP, sample: isDemo }
+  return { range, history, products, users, events, usersOk, eventsOk, truncated: history.length >= ORDER_CAP }
 }
 
 export function useReportData(sel: RangeSel) {

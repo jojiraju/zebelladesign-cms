@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { collection, doc, getDoc, getDocs, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
-import { useDocs, type Doc } from '../lib/hooks'
+import { useList, type Doc } from '../lib/hooks'
 import { useAuth } from '../lib/auth'
-import { audit } from '../lib/audit'
-import { revalidateStorefront } from '../lib/api'
-import { clean, errMsg, formatINR, slugify, toPaise, toRupees } from '../lib/util'
+import { api } from '../lib/api'
+import { errMsg, formatINR, slugify, toPaise, toRupees } from '../lib/util'
 import { Archive, ArrowLeft, Eye, EyeOff, FileText, FolderTree, Image as ImageIcon, Layers, Pencil, Plus, Save, Search, Tag } from 'lucide-react'
 import { Badge, Empty, ErrorBox, Field, IconButton, PageHeader, Section, Spinner, Switch, Tabs, useToast } from '../components/ui'
 import { DataTable, type TableColumn } from '../components/DataTable'
@@ -29,7 +26,7 @@ const totalStock = (p: Pick<Product, 'variants'>) => (p.variants ?? []).reduce((
 export function ProductsPage() {
   const { can } = useAuth()
   const toast = useToast()
-  const { data, loading, error, reload } = useDocs<Product>('products')
+  const { data, loading, error, reload } = useList<Product>('/api/admin/products', { limit: 2000 })
   const [status, setStatus] = useState('all')
   const nav = useNavigate()
   const rows = useMemo(
@@ -39,7 +36,7 @@ export function ProductsPage() {
   const writable = can('catalog:write')
 
   async function setProductStatus(id: string, next: Product['status']) {
-    try { await updateDoc(doc(db, 'products', id), { status: next, updatedAt: Date.now() }); await audit('product.status', id, { next }); void revalidateStorefront(); reload() } catch (e) { toast(errMsg(e), 'error') }
+    try { await api(`/api/admin/products/${id}`, { method: 'PATCH', body: JSON.stringify({ status: next }) }); reload() } catch (e) { toast(errMsg(e), 'error') }
   }
 
   const columns: TableColumn<Doc<Product>>[] = [
@@ -93,16 +90,14 @@ export function ProductEditorPage() {
   const [busy, setBusy] = useState(false)
   const [sizesText, setSizesText] = useState('')
   const [colorsText, setColorsText] = useState('')
-  const cats = useDocs<{ name: string; slug: string }>('categories', useMemo(() => [orderBy('order')], []))
-  const cols = useDocs<{ name: string }>('collections', useMemo(() => [orderBy('order')], []))
-  const [newId] = useState(() => doc(collection(db, 'products')).id) // pre-allocated so uploads can use the final folder
-  const pid = isNew ? newId : id!
+  const cats = useList<{ name: string; slug: string }>('/api/admin/categories')
+  const cols = useList<{ name: string }>('/api/admin/collections')
+  const [uploadId] = useState(() => crypto.randomUUID()) // a folder for this product's uploads before it has an ID
+  const pid = isNew ? uploadId : id!
 
   useEffect(() => {
     if (isNew) return
-    getDoc(doc(db, 'products', id!)).then((s) => {
-      if (!s.exists()) return setLoadErr('Product not found.')
-      const d = s.data() as Product
+    api<Product>(`/api/admin/products/${id}`).then((d) => {
       setP(d); setPrice(toRupees(d.price)); setSale(toRupees(d.salePrice))
     }).catch((e) => setLoadErr(errMsg(e)))
   }, [id, isNew])
@@ -139,34 +134,9 @@ export function ProductEditorPage() {
     if (errs.length) return toast(errs[0], 'error')
     setBusy(true)
     try {
-      const slug = p.slug.trim() || slugify(p.name)
-      // Slug uniqueness check (cheap: catalogue is small).
-      const all = await getDocs(query(collection(db, 'products')))
-      if (all.docs.some((d) => d.id !== pid && d.data().slug === slug)) throw new Error(`Another product already uses the URL "${slug}".`)
-      const cat = cats.data.find((c) => c.id === p.categoryId)
-      const base = {
-        ...p, slug, categorySlug: cat?.slug ?? p.categorySlug, price: toPaise(price), salePrice: sale ? toPaise(sale) : null,
-        videoUrl: p.videoUrl || '', updatedAt: Date.now(),
-      }
-      const ref = doc(db, 'products', pid)
-      if (isNew) {
-        // Initial stock for brand-new products is allowed; later changes go through Inventory (audited, logged).
-        await setDoc(ref, clean({ ...base, createdAt: Date.now(), soldCount: 0, variants: p.variants.map((v) => ({ ...v, reserved: 0 })) }))
-        await Promise.all(p.variants.filter((v) => v.stock > 0).map((v) => setDoc(doc(collection(db, 'inventoryMovements')), { productId: pid, variantId: v.id, delta: v.stock, reason: 'initial stock', createdAt: Date.now() })))
-      } else {
-        // Preserve live stock/reserved counters (changed by checkouts) — never trust the stale copy in this form.
-        await runTransaction(db, async (tx) => {
-          const cur = await tx.get(ref)
-          const live = new Map(((cur.data() as Product).variants ?? []).map((v) => [v.id, v]))
-          const variants = p.variants.map((v) => {
-            const l = live.get(v.id)
-            return l ? { ...v, stock: l.stock, reserved: l.reserved } : { ...v, reserved: 0 }
-          })
-          tx.set(ref, clean({ ...base, soldCount: (cur.data() as Product).soldCount ?? 0, variants }), { merge: true })
-        })
-      }
-      await audit(isNew ? 'product.create' : 'product.update', pid, { name: p.name })
-      void revalidateStorefront()
+      // The server checks the slug and keeps live stock counts, so a stale form can't overwrite them.
+      const body = { ...p, price: toPaise(price), salePrice: sale ? toPaise(sale) : null, videoUrl: p.videoUrl || '' }
+      await api(isNew ? '/api/admin/products' : `/api/admin/products/${id}`, { method: isNew ? 'POST' : 'PUT', body: JSON.stringify(body) })
       toast('Product saved')
       nav('/products')
     } catch (e) { toast(errMsg(e), 'error') } finally { setBusy(false) }

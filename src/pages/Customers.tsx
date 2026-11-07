@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ClipboardList, Eye, Search, ShieldCheck } from 'lucide-react'
-import { db } from '../lib/firebase'
-import { api } from '../lib/api'
+import { api, apiList } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { errMsg, fmtDate, formatINR } from '../lib/util'
 import { Badge, ErrorBox, IconButton, PageHeader, Section, useToast } from '../components/ui'
@@ -22,7 +20,7 @@ const Avatar = ({ c, size = 9 }: { c: Customer; size?: number }) => (
 function useRoleChange(onDone: (uid: string, role: string | null) => void) {
   const toast = useToast()
   return async (c: Customer, role: string | null) => {
-    if (!window.confirm(`${role ? `Grant "${role}" access to` : 'Remove staff access from'} ${c.email}? They must sign in again to apply it.`)) return
+    if (!window.confirm(`${role ? `Grant "${role}" access to` : 'Remove staff access from'} ${c.email}?`)) return
     try { await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ uid: c.uid, role }) }); toast('Role updated'); onDone(c.uid, role) } catch (e) { toast(errMsg(e), 'error') }
   }
 }
@@ -97,8 +95,8 @@ export function CustomerDetailPage() {
   const setRole = useRoleChange((_, role) => setC((x) => (x ? { ...x, role } : x)))
 
   useEffect(() => {
-    getDocs(query(collection(db, 'orders'), where('userId', '==', uid), orderBy('createdAt', 'desc'), limit(100)))
-      .then((s) => setOrders(s.docs.map((d) => ({ ...(d.data() as Order), id: d.id })))).catch((e) => setErr(errMsg(e)))
+    apiList<Order>('/api/admin/orders', { userId: uid, limit: 100 })
+      .then((r) => setOrders(r.results)).catch((e) => setErr(errMsg(e)))
   }, [uid])
 
   // Opened directly (no router state): look the account up by the e-mail on its first order.
@@ -132,7 +130,7 @@ export function CustomerDetailPage() {
             </dl>
           </section>
           {c && can('roles:manage') && (
-            <Section title="Staff access" hint="Staff must sign in again for a change to apply." icon={ShieldCheck} tone="violet">
+            <Section title="Staff access" hint="Changes apply straight away." icon={ShieldCheck} tone="violet">
               {c.role
                 ? <button className="btn btn-danger w-full" onClick={() => void setRole(c, null)}>Remove “{c.role}” access</button>
                 : <RoleSelect c={c} onPick={(r) => void setRole(c, r)} />}

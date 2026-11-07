@@ -1,11 +1,8 @@
 import { Select } from './Select'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { addDoc, collection, deleteDoc, doc, getDoc, orderBy, setDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
-import { useDocs, type Doc } from '../lib/hooks'
-import { audit } from '../lib/audit'
-import { revalidateStorefront } from '../lib/api'
+import { useList, type Doc } from '../lib/hooks'
+import { api } from '../lib/api'
 import { errMsg, fmtDate, slugify, toPaise, toRupees } from '../lib/util'
 import { useAuth } from '../lib/auth'
 import type { Permission } from '../lib/permissions'
@@ -22,7 +19,8 @@ export type FieldDef =
   | { key: string; label: string; type: 'image'; folder: string }
 
 export interface ResourceConfig {
-  collection: string
+  /** API path of the list, e.g. '/api/admin/categories'. */
+  endpoint: string
   /** Route of the list page, e.g. '/categories' (the editor lives at `<path>/new` and `<path>/:id`). */
   path: string
   title: string
@@ -31,16 +29,10 @@ export interface ResourceConfig {
   fields: FieldDef[]
   /** Fields shown in the table */
   columns: { key: string; label: string; render?(v: unknown, row: Rec): ReactNode }[]
-  /** Derive the document id from a field (e.g. slug). Otherwise Firestore auto-ids. */
-  idFrom?: string
   /** Auto-fill `slug` from this field's value while creating. */
   slugFrom?: string
   defaults: Rec
-  orderBy?: string
   description?: string
-  revalidate?: boolean
-  /** Fields written only when a document is first created. */
-  onCreate?: Rec
   /** Adjust the stored document just before saving (e.g. unit conversion). */
   beforeSave?(body: Rec): Rec
   /** Adjust the editable form right after loading a document. */
@@ -78,16 +70,13 @@ export function ResourceManager({ cfg }: { cfg: ResourceConfig }) {
   const { can } = useAuth()
   const toast = useToast()
   const nav = useNavigate()
-  const [constraints] = useState(() => (cfg.orderBy ? [orderBy(cfg.orderBy)] : []))
-  const { data, loading, error, reload } = useDocs<Rec>(cfg.collection, constraints)
+  const { data, loading, error, reload } = useList<Rec>(cfg.endpoint)
   const writable = can(cfg.permission)
 
   async function remove(row: Doc<Rec>) {
     if (!window.confirm(`Delete this ${cfg.singular.toLowerCase()}? This cannot be undone.`)) return
     try {
-      await deleteDoc(doc(db, cfg.collection, row.id))
-      await audit(`${cfg.collection}.delete`, row.id)
-      if (cfg.revalidate !== false) void revalidateStorefront()
+      await api(`${cfg.endpoint}/${row.id}`, { method: 'DELETE' })
       toast(`${cfg.singular} deleted`)
       reload()
     } catch (e) { toast(errMsg(e), 'error') }
@@ -133,7 +122,7 @@ export function ResourceEditor({ cfg }: { cfg: ResourceConfig }) {
 
   useEffect(() => {
     if (isNew) return
-    getDoc(doc(db, cfg.collection, id!)).then((s) => (s.exists() ? setForm(toForm(cfg, s.data() as Rec)) : setLoadErr(`${cfg.singular} not found.`))).catch((e) => setLoadErr(errMsg(e)))
+    api<Rec>(`${cfg.endpoint}/${id}`).then((row) => setForm(toForm(cfg, row))).catch((e) => setLoadErr(errMsg(e)))
   }, [cfg, id, isNew])
 
   const back = <Link to={cfg.path} className="link inline-flex items-center gap-1 text-sm"><ArrowLeft size={14} />All {cfg.title.toLowerCase()}</Link>
@@ -148,21 +137,10 @@ export function ResourceEditor({ cfg }: { cfg: ResourceConfig }) {
     }
     setBusy(true)
     try {
-      let body: Rec = { ...fromForm(cfg, form), updatedAt: Date.now() }
+      let body: Rec = fromForm(cfg, form)
       if (cfg.beforeSave) body = cfg.beforeSave(body)
       if (cfg.slugFrom && !body.slug) body.slug = slugify(String(body[cfg.slugFrom] ?? ''))
-      let docId = id
-      if (!docId) {
-        body = { ...body, ...cfg.onCreate, createdAt: Date.now() }
-        if (cfg.idFrom) {
-          docId = String(body[cfg.idFrom] || '')
-          if (!docId) throw new Error('A unique key is required.')
-          if ((await getDoc(doc(db, cfg.collection, docId))).exists()) throw new Error(`"${docId}" already exists.`)
-          await setDoc(doc(db, cfg.collection, docId), body)
-        } else docId = (await addDoc(collection(db, cfg.collection), body)).id
-      } else await setDoc(doc(db, cfg.collection, docId), body, { merge: true })
-      await audit(`${cfg.collection}.${isNew ? 'create' : 'update'}`, docId)
-      if (cfg.revalidate !== false) void revalidateStorefront()
+      await api(isNew ? cfg.endpoint : `${cfg.endpoint}/${id}`, { method: isNew ? 'POST' : 'PATCH', body: JSON.stringify(body) })
       toast(`${cfg.singular} saved`)
       nav(cfg.path)
     } catch (e) { toast(errMsg(e), 'error') } finally { setBusy(false) }
@@ -193,7 +171,7 @@ export function ResourceEditor({ cfg }: { cfg: ResourceConfig }) {
                       value={String(v ?? '')} onChange={(e) => {
                         set(f.key, e.target.value)
                         if (isNew && cfg.slugFrom === f.key && 'slug' in form) set('slug', slugify(e.target.value))
-                      }} disabled={!isNew && cfg.idFrom === f.key} />}
+                      }} disabled={!isNew && f.key === 'slug'} />}
               </Field>
             )
           })}

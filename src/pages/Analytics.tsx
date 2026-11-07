@@ -45,7 +45,6 @@ export default function Analytics() {
         ))}
       </div>
 
-      {data?.sample && <Notice>These reports are running on the built-in <b>demo data</b> (about 800 days of sample orders, customers and stock), so you can explore every chart and Excel download.</Notice>}
       {data?.truncated && <Notice tone="warn">This range has more than 10,000 orders, so older ones are left out. Narrow the date range for exact figures.</Notice>}
       {error && <ErrorBox message={error} />}
       {loading && !a ? <Spinner /> : a && (

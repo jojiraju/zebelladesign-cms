@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { LoginArt } from '../components/LoginArt'
-import { ArrowRight, BarChart3, Eye, EyeOff, Loader2, Lock, Mail, Shirt, ShoppingBag, Sparkles } from 'lucide-react'
-import { api } from '../lib/api'
+import { ArrowRight, BarChart3, Eye, EyeOff, Loader2, Lock, Mail, Shirt, ShoppingBag } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { errMsg } from '../lib/util'
 
@@ -81,12 +80,6 @@ export function LoginPage() {
             <button className="btn btn-solid mt-2 w-full !min-h-[2.9rem]" disabled={busy}>
               {busy ? <><Loader2 size={16} className="animate-spin" />Signing in…</> : <>Sign in <ArrowRight size={16} /></>}
             </button>
-            <div className="flex items-center gap-3 pt-1 text-[0.68rem] uppercase tracking-[0.2em] text-taupe">
-              <span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" />
-            </div>
-            <button type="button" className="btn w-full" onClick={() => auth.devLogin()}>
-              <Sparkles size={15} className="text-champagne" />Continue as demo admin
-            </button>
           </form>
         </div>
         <p className="absolute bottom-4 text-xs text-taupe">© Ze Bella Designs</p>
@@ -98,37 +91,11 @@ export function LoginPage() {
 /** Shown to a signed-in user who has no staff role. Offers the one-time first-admin claim. */
 export function NoAccessPage() {
   const auth = useAuth()
-  const [secret, setSecret] = useState('')
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  async function claim() {
-    setBusy(true); setMsg(null)
-    try {
-      const r = await api<{ message: string }>('/api/admin/bootstrap', { method: 'POST', body: JSON.stringify({ secret }) })
-      setMsg({ ok: true, text: r.message })
-      await auth.logout()
-    } catch (e) {
-      setMsg({ ok: false, text: errMsg(e) })
-    } finally {
-      setBusy(false); setSecret('')
-    }
-  }
-
   return (
     <main className="grid min-h-screen place-items-center p-4">
       <div className="card w-full max-w-md !p-8">
         <h1 className="text-3xl">No access</h1>
         <p className="mt-3 text-sm text-taupe-deep">{auth.user?.email} is signed in but has no staff role. Ask an administrator to grant one.</p>
-        <details className="mt-8 border-t border-line pt-4">
-          <summary className="cursor-pointer text-sm font-medium text-gold-deep">First-time setup: claim the initial administrator role</summary>
-          <p className="mt-3 text-xs text-taupe-deep">Works once, only while no administrator exists, and only with the <code>ADMIN_BOOTSTRAP_SECRET</code> configured on the server.</p>
-          <form className="mt-3 space-y-3" onSubmit={(e) => { e.preventDefault(); void claim() }}>
-            <input className="field" type="password" autoComplete="off" placeholder="Bootstrap secret" value={secret} onChange={(e) => setSecret(e.target.value)} />
-            <button className="btn btn-solid" disabled={busy || secret.length < 8}>{busy ? 'Checking…' : 'Claim admin role'}</button>
-          </form>
-          {msg && <p role="status" className={`mt-3 text-sm ${msg.ok ? 'text-ok' : 'text-danger'}`}>{msg.text}</p>}
-        </details>
         <button className="btn mt-8" onClick={() => auth.logout()}>Sign out</button>
       </div>
     </main>

@@ -1,17 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Save } from 'lucide-react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
-import { audit } from '../lib/audit'
-import { revalidateStorefront } from '../lib/api'
-import { clean, errMsg } from '../lib/util'
+import { api } from '../lib/api'
+import { errMsg } from '../lib/util'
 import { useAuth } from '../lib/auth'
 import type { Permission } from '../lib/permissions'
 import { ErrorBox, PageHeader, Spinner, useToast } from './ui'
 
-/** Loads one settings-style document, hands the editable draft to `children`, and saves with audit + cache refresh. */
-export function DocEditor<T extends object>({ col, id, title, subtitle, permission, defaults, children }: {
-  col: string; id: string; title: string; subtitle?: string; permission: Permission; defaults: T
+/** Loads one settings-style document, hands the editable draft to `children`, and saves the whole document. */
+export function DocEditor<T extends object>({ endpoint, title, subtitle, permission, defaults, children }: {
+  endpoint: string; title: string; subtitle?: string; permission: Permission; defaults: T
   children(draft: T, set: <K extends keyof T>(k: K, v: T[K]) => void): ReactNode
 }) {
   const { can } = useAuth()
@@ -21,9 +18,9 @@ export function DocEditor<T extends object>({ col, id, title, subtitle, permissi
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    getDoc(doc(db, col, id)).then((s) => setDraft({ ...defaults, ...(s.exists() ? (s.data() as T) : {}) })).catch((e) => setErr(errMsg(e)))
+    api<Partial<T>>(endpoint).then((d) => setDraft({ ...defaults, ...d })).catch((e) => setErr(errMsg(e)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [col, id])
+  }, [endpoint])
 
   if (err) return <ErrorBox message={err} />
   if (!draft) return <Spinner />
@@ -33,10 +30,8 @@ export function DocEditor<T extends object>({ col, id, title, subtitle, permissi
   async function save() {
     setBusy(true)
     try {
-      await setDoc(doc(db, col, id), clean({ ...draft, updatedAt: Date.now() }), { merge: true })
-      await audit(`${col}.${id}.update`, `${col}/${id}`)
-      void revalidateStorefront()
-      toast('Saved — the storefront will refresh within a minute')
+      await api(endpoint, { method: 'PUT', body: JSON.stringify(draft) })
+      toast('Saved')
     } catch (e) { toast(errMsg(e), 'error') } finally { setBusy(false) }
   }
 

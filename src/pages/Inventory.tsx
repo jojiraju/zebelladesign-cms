@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore'
 import { ArrowLeft, History, Package, Save, SlidersHorizontal } from 'lucide-react'
-import { db } from '../lib/firebase'
-import { api, revalidateStorefront } from '../lib/api'
-import { useDocs, type Doc } from '../lib/hooks'
+import { api, apiList } from '../lib/api'
+import { useList, type Doc } from '../lib/hooks'
 import { useAuth } from '../lib/auth'
 import { errMsg, fmtDate } from '../lib/util'
 import { Badge, ErrorBox, Field, IconButton, PageHeader, Section, Spinner, useToast } from '../components/ui'
@@ -27,7 +25,7 @@ const histCols: TableColumn<Movement>[] = [
 /* ============================== list ============================== */
 export default function InventoryPage() {
   const { can } = useAuth()
-  const { data, loading, error } = useDocs<Product>('products')
+  const { data, loading, error } = useList<Product>('/api/admin/products', { limit: 2000 })
   const [onlyLow, setOnlyLow] = useState(false)
 
   const rows = useMemo<Row[]>(() => data.flatMap((p) => p.variants.map((v) => ({ p, v, avail: v.stock - v.reserved }))).filter((r) => !onlyLow || r.avail <= r.p.lowStockThreshold), [data, onlyLow])
@@ -60,7 +58,7 @@ function useProduct(pid?: string) {
   const [p, setP] = useState<Doc<Product> | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
-    getDoc(doc(db, 'products', pid!)).then((s) => (s.exists() ? setP({ ...(s.data() as Product), id: s.id }) : setErr('Product not found.'))).catch((e) => setErr(errMsg(e)))
+    api<Doc<Product>>(`/api/admin/products/${pid}`).then(setP).catch((e) => setErr(errMsg(e)))
   }, [pid])
   return { p, err }
 }
@@ -94,7 +92,7 @@ export function InventoryAdjustPage() {
     setBusy(true)
     try {
       await api('/api/admin/inventory', { method: 'POST', body: JSON.stringify({ productId: p!.id, variantId: v.id, delta: d, reason }) })
-      toast('Stock updated'); void revalidateStorefront(); nav('/inventory')
+      toast('Stock updated'); nav('/inventory')
     } catch (e) { toast(errMsg(e), 'error'); setBusy(false) }
   }
 
@@ -150,8 +148,8 @@ export function InventoryHistoryPage() {
   const [qErr, setQErr] = useState<string | null>(null)
 
   useEffect(() => {
-    getDocs(query(collection(db, 'inventoryMovements'), where('productId', '==', pid), orderBy('createdAt', 'desc'), limit(100)))
-      .then((s) => setItems(s.docs.map((d) => ({ ...(d.data() as Movement), id: d.id })))).catch((e) => setQErr(errMsg(e)))
+    apiList<Movement>('/api/admin/inventory/movements', { productId: pid, limit: 100 })
+      .then((r) => setItems(r.results)).catch((e) => setQErr(errMsg(e)))
   }, [pid])
 
   if (err) return <div>{back}<div className="mt-4"><ErrorBox message={err} /></div></div>

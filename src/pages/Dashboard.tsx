@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { collection, getCountFromServer, getDocs, limit, orderBy, query, where } from 'firebase/firestore'
 import { AlertTriangle, ArrowRight, Boxes, ClipboardList, FileText, FolderTree, IndianRupee, Plus, Settings, Shirt, ShoppingBag } from 'lucide-react'
-import { db, isConfigured } from '../lib/firebase'
+import { apiList } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { loadStats, summarise, type DayStat } from '../lib/stats'
 import { errMsg, formatINR, fmtDate } from '../lib/util'
@@ -34,21 +33,16 @@ export default function Dashboard() {
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isConfigured) {
-      setStats([])
-      setOrders([])
-      setCounts({ products: 0, awaiting: 0 })
-      setLow([])
-      return
-    }
     const jobs: Promise<unknown>[] = []
     if (can('analytics:read')) jobs.push(loadStats(30).then(setStats))
     if (can('orders:read')) {
-      jobs.push(getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(200))).then((s) => setOrders(s.docs.map((d) => ({ ...(d.data() as OrderRow), id: d.id })))))
-      jobs.push(getCountFromServer(query(collection(db, 'orders'), where('fulfillmentStatus', '==', 'processing'))).then((c) => setCounts((x) => ({ products: x?.products ?? 0, awaiting: c.data().count }))))
+      jobs.push(apiList<OrderRow>('/api/admin/orders', { limit: 200 }).then((r) => setOrders(r.results)))
+      jobs.push(apiList('/api/admin/orders', { fulfillmentStatus: 'processing', limit: 1 }).then((r) => setCounts((x) => ({ products: x?.products ?? 0, awaiting: r.count }))))
     }
-    jobs.push(getCountFromServer(collection(db, 'products')).then((c) => setCounts((x) => ({ awaiting: x?.awaiting ?? 0, products: c.data().count }))))
-    jobs.push(getDocs(query(collection(db, 'products'), limit(300))).then((s) => setLow(s.docs.map((d) => ({ ...(d.data() as ProductRow), id: d.id })).filter((p) => avail(p) <= p.lowStockThreshold))))
+    jobs.push(apiList<ProductRow>('/api/admin/products', { limit: 300 }).then((r) => {
+      setCounts((x) => ({ awaiting: x?.awaiting ?? 0, products: r.count }))
+      setLow(r.results.filter((p) => avail(p) <= p.lowStockThreshold))
+    }))
     Promise.all(jobs).catch((e) => setErr(errMsg(e)))
   }, [can])
 
