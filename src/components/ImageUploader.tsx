@@ -22,10 +22,6 @@ export async function uploadFile(file: File, folder: string, opts: { video?: boo
   return api<Img>('/api/admin/uploads', { method: 'POST', body })
 }
 
-export async function removeFile(path?: string) {
-  if (path) await api(`/api/admin/uploads?path=${encodeURIComponent(path)}`, { method: 'DELETE' }).catch(() => undefined) // already gone is fine
-}
-
 /** Click-or-drop target shared by both editors. */
 function DropZone({ busy, multiple, onFiles, className = '', children }: { busy: boolean; multiple?: boolean; onFiles(files: File[]): void; className?: string; children: React.ReactNode }) {
   const input = useRef<HTMLInputElement>(null)
@@ -84,7 +80,7 @@ export function GalleryEditor({ images, onChange, folder }: { images: Img[]; onC
               {i === 0 && <span className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-pink-500 to-violet-600 px-2.5 py-0.5 text-[0.65rem] font-semibold text-white shadow">Cover</span>}
               <div className="absolute inset-x-0 bottom-0 flex translate-y-full justify-between bg-gradient-to-t from-black/70 to-transparent p-2 pt-6 text-white transition group-hover:translate-y-0 group-focus-within:translate-y-0">
                 <button type="button" aria-label="Move earlier" onClick={() => move(i, -1)} disabled={i === 0} className="grid h-8 w-8 place-items-center rounded-lg bg-white/20 backdrop-blur hover:bg-white/35 disabled:opacity-30"><ArrowLeft size={15} /></button>
-                <button type="button" aria-label="Remove image" onClick={() => { void removeFile(img.path); onChange(images.filter((_, k) => k !== i)) }} className="grid h-8 w-8 place-items-center rounded-lg bg-red-500/80 hover:bg-red-500"><Trash2 size={15} /></button>
+                <button type="button" aria-label="Remove image" onClick={() => onChange(images.filter((_, k) => k !== i))} className="grid h-8 w-8 place-items-center rounded-lg bg-red-500/80 hover:bg-red-500"><Trash2 size={15} /></button>
                 <button type="button" aria-label="Move later" onClick={() => move(i, 1)} disabled={i === images.length - 1} className="grid h-8 w-8 place-items-center rounded-lg bg-white/20 backdrop-blur hover:bg-white/35 disabled:opacity-30"><ArrowRight size={15} /></button>
               </div>
             </li>

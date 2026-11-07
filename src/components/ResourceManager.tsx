@@ -39,12 +39,15 @@ export interface ResourceConfig {
   afterLoad?(form: Rec, row: Rec): Rec
 }
 
+/** The browser's local clock time, as a datetime-local input expects. */
+const localInput = (ms: number) => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+
 const toForm = (cfg: ResourceConfig, row: Rec): Rec => {
   const out: Rec = {}
   for (const f of cfg.fields) {
     const v = row[f.key]
     if (f.type === 'money') out[f.key] = toRupees(v as number | null)
-    else if (f.type === 'datetime') out[f.key] = v ? new Date(v as number).toISOString().slice(0, 16) : ''
+    else if (f.type === 'datetime') out[f.key] = v ? localInput(v as number) : ''
     else if (f.type === 'idlist') out[f.key] = Array.isArray(v) ? (v as string[]).join(', ') : ''
     else out[f.key] = v ?? (f.type === 'bool' ? false : '')
   }

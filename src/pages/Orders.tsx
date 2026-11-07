@@ -102,6 +102,8 @@ export function OrderDetailPage() {
   const [note, setNote] = useState('')
   const [refundAmt, setRefundAmt] = useState('')
   const [reason, setReason] = useState('')
+  // One key per refund attempt. A resubmit of this attempt can never pay out twice; it changes only after a definite answer.
+  const [refundKey, setRefundKey] = useState(() => crypto.randomUUID())
 
   const load = () => api<Order>(`/api/admin/orders/${id}`).then(setO).catch((e) => setErr(errMsg(e)))
   useEffect(() => { void load() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -176,7 +178,7 @@ export function OrderDetailPage() {
                 e.preventDefault()
                 const amount = Math.round(Number(refundAmt || o.total / 100) * 100)
                 if (!window.confirm(`Refund ${formatINR(amount)} to the customer via Razorpay? This cannot be undone.`)) return
-                void act(() => api(`/api/admin/orders/${o.id}/refund`, { method: 'POST', body: JSON.stringify({ amount, reason }) }), 'Refund submitted')
+                void act(() => api(`/api/admin/orders/${o.id}/refund`, { method: 'POST', body: JSON.stringify({ amount, reason, idempotencyKey: refundKey }) }).then(() => setRefundKey(crypto.randomUUID())), 'Refund submitted')
               }}>
                 <Field label="Refund amount (₹)" hint="Defaults to the full order total. The server checks it against Razorpay."><input type="number" step="0.01" min="0" className="field" placeholder={String(o.total / 100)} value={refundAmt} onChange={(e) => setRefundAmt(e.target.value)} /></Field>
                 <Field label="Reason"><input className="field" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
